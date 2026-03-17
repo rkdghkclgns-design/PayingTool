@@ -42,7 +42,7 @@ export interface ApiKeyTestResult {
 export const testApiKey = async (key: string): Promise<ApiKeyTestResult> => {
   try {
     const genAI = new GoogleGenerativeAI(key);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const result = await model.generateContent('Say "OK" in one word.');
     const text = result.response.text();
     if (text) {
@@ -94,7 +94,7 @@ const createClient = () => {
     throw new Error('Gemini API 키가 설정되지 않았습니다. 상단의 설정 버튼에서 API 키를 입력하세요.');
   }
   const genAI = new GoogleGenerativeAI(apiKey);
-  return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  return genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 };
 
 const parseJsonResponse = <T>(text: string): T => {
