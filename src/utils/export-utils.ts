@@ -72,18 +72,6 @@ function formatDateForDisplay(): string {
  * Build the HTML section for game analysis results.
  */
 function buildAnalysisSection(analysis: GameStructure): string {
-  const currencyRows = analysis.currencies
-    .map(
-      (c) => `
-        <tr>
-          <td>${c.name}</td>
-          <td>${c.type === 'hard' ? '하드' : c.type === 'soft' ? '소프트' : c.type === 'premium' ? '프리미엄' : '이벤트'}</td>
-          <td>${c.earnableFree ? 'O' : 'X'}</td>
-          <td>${c.purchasable ? 'O' : 'X'}</td>
-        </tr>`,
-    )
-    .join('');
-
   return `
     <section class="section">
       <h2>1. 게임 분석 결과</h2>
@@ -97,29 +85,8 @@ function buildAnalysisSection(analysis: GameStructure): string {
           <span class="value">${analysis.coreLoop}</span>
         </div>
       </div>
-
-      <h3>성장 시스템</h3>
-      <ul>${analysis.progressionSystems.map((s) => `<li>${s}</li>`).join('')}</ul>
-
-      <h3>소셜 기능</h3>
-      <ul>${analysis.socialFeatures.map((s) => `<li>${s}</li>`).join('')}</ul>
-
-      <h3>콘텐츠 유형</h3>
-      <ul>${analysis.contentTypes.map((s) => `<li>${s}</li>`).join('')}</ul>
-
-      <h3>재화 구조</h3>
-      <table>
-        <thead>
-          <tr><th>재화명</th><th>유형</th><th>무료 획득</th><th>구매 가능</th></tr>
-        </thead>
-        <tbody>${currencyRows}</tbody>
-      </table>
-
-      <h3>리텐션 훅</h3>
-      <ul>${analysis.retentionHooks.map((s) => `<li>${s}</li>`).join('')}</ul>
-
-      <h3>경쟁 요소</h3>
-      <ul>${analysis.competitiveElements.map((s) => `<li>${s}</li>`).join('')}</ul>
+      <h3>AI 분석 원본</h3>
+      <div class="raw-analysis">${analysis.rawAnalysis}</div>
     </section>`;
 }
 
@@ -476,6 +443,18 @@ function buildReportStyles(): string {
         margin-top: 0;
         color: #1f2937;
         font-family: 'SF Mono', 'Fira Code', monospace;
+      }
+      .raw-analysis {
+        white-space: pre-wrap;
+        font-size: 13px;
+        line-height: 1.8;
+        color: #374151;
+        padding: 16px;
+        background: #ffffff;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        word-break: keep-all;
+        overflow-wrap: break-word;
       }
       ul {
         list-style: none;

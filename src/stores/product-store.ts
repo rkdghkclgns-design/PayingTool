@@ -11,6 +11,7 @@ interface ProductActions {
   addProduct: (product: Product) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
+  setProducts: (products: readonly Product[]) => void;
   setSelectedSegment: (segment: UserSegment) => void;
   getProductsBySegment: (segment: UserSegment) => readonly Product[];
   getProductsByRetentionStage: (stage: RetentionStage) => readonly Product[];
@@ -48,6 +49,12 @@ export const useProductStore = create<ProductStore>()(
         set((state) => ({
           ...state,
           products: state.products.filter((p) => p.id !== id),
+        })),
+
+      setProducts: (products: readonly Product[]) =>
+        set((state) => ({
+          ...state,
+          products,
         })),
 
       setSelectedSegment: (segment: UserSegment) =>

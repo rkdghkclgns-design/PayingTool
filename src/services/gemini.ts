@@ -42,8 +42,11 @@ export interface ApiKeyTestResult {
 export const testApiKey = async (key: string): Promise<ApiKeyTestResult> => {
   try {
     const genAI = new GoogleGenerativeAI(key);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    const result = await model.generateContent('Say "OK" in one word.');
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      generationConfig: { maxOutputTokens: 5 },
+    });
+    const result = await model.generateContent('Hi');
     const text = result.response.text();
     if (text) {
       return { success: true, message: 'API 키가 정상적으로 작동합니다!' };
@@ -120,9 +123,16 @@ const toUserFriendlyError = (error: unknown): Error => {
     );
   }
 
-  if (msg.includes('API_KEY_INVALID') || msg.includes('invalid')) {
+  if (msg.includes('API_KEY_INVALID') || msg.includes('PERMISSION_DENIED')) {
     return new Error(
       'API 키가 유효하지 않습니다. 사이드바 하단의 "API 키 설정"에서 올바른 키를 입력해주세요.'
+    );
+  }
+
+  if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
+    return new Error(
+      'API 요청 한도를 초과했습니다. 1~2분 후 다시 시도해주세요.\n' +
+      '반복될 경우 Google AI Studio에서 할당량을 확인하세요.'
     );
   }
 
@@ -134,14 +144,34 @@ const isNonRetryableError = (error: unknown): boolean => {
   return msg.includes('leaked') ||
     msg.includes('disabled') ||
     msg.includes('API_KEY_INVALID') ||
-    msg.includes('invalid') ||
+    msg.includes('PERMISSION_DENIED') ||
     msg.includes('403');
+};
+
+const is429Error = (error: unknown): boolean => {
+  const msg = error instanceof Error ? error.message : String(error);
+  return msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
+};
+
+// ─── Client-side request throttling ───
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 2000; // 최소 2초 간격
+
+const throttleRequest = async (): Promise<void> => {
+  const now = Date.now();
+  const elapsed = now - lastRequestTime;
+  if (elapsed < MIN_REQUEST_INTERVAL) {
+    await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL - elapsed));
+  }
+  lastRequestTime = Date.now();
 };
 
 const retryWithBackoff = async <T>(
   fn: () => Promise<T>,
   maxRetries: number = 3
 ): Promise<T> => {
+  await throttleRequest();
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       return await fn();
@@ -150,8 +180,13 @@ const retryWithBackoff = async <T>(
       if (isNonRetryableError(error)) {
         throw toUserFriendlyError(error);
       }
-      if (attempt === maxRetries - 1) throw error;
-      const delay = Math.pow(2, attempt) * 1000;
+      if (attempt === maxRetries - 1) {
+        throw toUserFriendlyError(error);
+      }
+      // 429(할당량 초과) 에러는 더 긴 대기 시간 적용
+      const delay = is429Error(error)
+        ? Math.pow(2, attempt) * 5000   // 5s, 10s, 20s
+        : Math.pow(2, attempt) * 1000;  // 1s, 2s, 4s
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }

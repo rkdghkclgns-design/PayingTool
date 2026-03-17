@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Sparkles, ChevronDown, ChevronUp, RefreshCw, AlertCircle, CheckCircle2, MessageSquare } from 'lucide-react';
+import { Sparkles, ChevronDown, ChevronUp, RefreshCw, AlertCircle, CheckCircle2, MessageSquare, Replace, Plus, X } from 'lucide-react';
 import type { ProductMixRecommendation } from '../../services/gemini';
 import type { GameStructure } from '../../models/game-structure';
 import type { Product, ProductCategory } from '../../models';
@@ -120,9 +120,12 @@ export default function AiProductMixPanel() {
   const [applySuccess, setApplySuccess] = useState<string | null>(null);
   const [showRequirements, setShowRequirements] = useState(false);
   const [userRequirements, setUserRequirements] = useState('');
+  const [showApplyMode, setShowApplyMode] = useState(false);
 
   const analysisResult = useMindmapStore((s) => s.analysisResult);
   const addProduct = useProductStore((s) => s.addProduct);
+  const setProducts = useProductStore((s) => s.setProducts);
+  const existingProducts = useProductStore((s) => s.products);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
 
   // Current recommendations based on active index
@@ -175,8 +178,8 @@ export default function AiProductMixPanel() {
     setApplySuccess(null);
   }, []);
 
-  const handleApplyToProducts = useCallback(() => {
-    if (!currentRecommendations || currentRecommendations.length === 0) return;
+  const buildNewProducts = useCallback((): readonly Product[] => {
+    if (!currentRecommendations || currentRecommendations.length === 0) return [];
 
     const genre = analysisResult?.genre;
     const midpointUsd = getStarterTierMidpointUsd(genre);
@@ -184,7 +187,7 @@ export default function AiProductMixPanel() {
     const projectId = activeProjectId ?? '';
     const now = new Date().toISOString();
 
-    const newProducts: readonly Product[] = currentRecommendations.map((item, index) => ({
+    return currentRecommendations.map((item, index) => ({
       id: generateProductId(),
       projectId,
       name: item.label,
@@ -202,18 +205,43 @@ export default function AiProductMixPanel() {
       createdAt: now,
       updatedAt: now,
     }));
+  }, [currentRecommendations, analysisResult, activeProjectId]);
 
+  const handleApplyToProducts = useCallback(() => {
+    if (!currentRecommendations || currentRecommendations.length === 0) return;
+
+    // 기존 상품이 있으면 교체/추가 선택 모달 표시
+    if (existingProducts.length > 0) {
+      setShowApplyMode(true);
+      return;
+    }
+
+    // 기존 상품이 없으면 바로 추가
+    const newProducts = buildNewProducts();
     for (const product of newProducts) {
       addProduct(product);
     }
-
     setApplySuccess(`상품 ${newProducts.length}개가 추가되었습니다`);
+    setTimeout(() => { setApplySuccess(null); }, 4000);
+  }, [currentRecommendations, existingProducts, buildNewProducts, addProduct]);
 
-    // Auto-dismiss success message after 4 seconds
-    setTimeout(() => {
-      setApplySuccess(null);
-    }, 4000);
-  }, [currentRecommendations, analysisResult, activeProjectId, addProduct]);
+  const handleApplyReplace = useCallback(() => {
+    const newProducts = buildNewProducts();
+    setProducts(newProducts);
+    setShowApplyMode(false);
+    setApplySuccess(`기존 상품을 교체하고 ${newProducts.length}개가 등록되었습니다`);
+    setTimeout(() => { setApplySuccess(null); }, 4000);
+  }, [buildNewProducts, setProducts]);
+
+  const handleApplyAppend = useCallback(() => {
+    const newProducts = buildNewProducts();
+    for (const product of newProducts) {
+      addProduct(product);
+    }
+    setShowApplyMode(false);
+    setApplySuccess(`기존 상품에 ${newProducts.length}개가 추가되었습니다`);
+    setTimeout(() => { setApplySuccess(null); }, 4000);
+  }, [buildNewProducts, addProduct]);
 
   const pieData = useMemo(
     () =>
@@ -300,6 +328,47 @@ export default function AiProductMixPanel() {
           <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
             요구사항을 입력하면 AI가 해당 내용을 반영하여 상품 믹스를 추천합니다
           </p>
+        </div>
+      )}
+
+      {/* Apply mode selection */}
+      {showApplyMode && (
+        <div className="mt-4 p-4 rounded-lg border-2 border-brand-300 dark:border-brand-600 bg-brand-50 dark:bg-brand-950">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              상품 반영 방식을 선택하세요
+            </h4>
+            <button
+              onClick={() => setShowApplyMode(false)}
+              className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-4 space-y-1">
+            <p>현재 등록된 상품: <span className="font-semibold text-gray-700 dark:text-gray-300">{existingProducts.length}개</span></p>
+            <p>새로 반영할 상품: <span className="font-semibold text-gray-700 dark:text-gray-300">{currentRecommendations?.length ?? 0}개</span></p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleApplyReplace}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium transition-colors cursor-pointer"
+            >
+              <Replace className="w-4 h-4" />
+              교체하기
+            </button>
+            <button
+              onClick={handleApplyAppend}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              추가하기
+            </button>
+          </div>
+          <div className="mt-3 text-xs text-gray-400 dark:text-gray-500 space-y-0.5">
+            <p><span className="font-medium">교체:</span> 기존 상품을 삭제하고 새 상품만 등록</p>
+            <p><span className="font-medium">추가:</span> 기존 상품을 유지하고 새 상품을 추가</p>
+          </div>
         </div>
       )}
 
