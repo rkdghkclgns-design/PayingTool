@@ -20,6 +20,7 @@ interface FunnelActions {
   assignProduct: (stageId: string, productId: string) => void;
   removeProduct: (stageId: string, productId: string) => void;
   resetStages: () => void;
+  loadStages: (stages: readonly FunnelStage[]) => void;
 }
 
 type FunnelStore = FunnelState & FunnelActions;
@@ -177,6 +178,11 @@ export const useFunnelStore = create<FunnelStore>()(
       resetStages: () =>
         set(() => ({
           stages: createDefaultStages(),
+        })),
+
+      loadStages: (stages: readonly FunnelStage[]) =>
+        set(() => ({
+          stages,
         })),
     }),
     {

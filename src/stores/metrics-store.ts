@@ -12,6 +12,7 @@ interface MetricsActions {
     value: MetricsConfig[K],
   ) => void;
   resetConfig: () => void;
+  loadConfig: (config: MetricsConfig) => void;
 }
 
 type MetricsStore = MetricsState & MetricsActions;
@@ -60,6 +61,11 @@ export const useMetricsStore = create<MetricsStore>()(
       resetConfig: () =>
         set(() => ({
           config: defaultConfig,
+        })),
+
+      loadConfig: (config: MetricsConfig) =>
+        set(() => ({
+          config: { ...defaultConfig, ...config },
         })),
     }),
     {

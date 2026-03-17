@@ -4,6 +4,7 @@ import type { Product, UserSegment, ProductCategory } from '../../models';
 import { USER_SEGMENT_LABELS, PRODUCT_CATEGORY_LABELS } from '../../utils/constants';
 import { useProductStore } from '../../stores/product-store';
 import { useGenreStore } from '../../stores/genre-store';
+import { useProjectStore } from '../../stores/project-store';
 import { DEFAULT_PRODUCTS } from '../../data/default-products';
 import PageContainer from '../layout/PageContainer';
 import Button from '../ui/Button';
@@ -107,6 +108,7 @@ function ProductReinforcementGuide({ products, genre }: { readonly products: rea
 export default function ProductBuilderPage() {
   const { products, selectedSegment, addProduct, updateProduct, deleteProduct, setSelectedSegment } = useProductStore();
   const selectedGenre = useGenreStore((s) => s.selectedGenre);
+  const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -270,7 +272,7 @@ export default function ProductBuilderPage() {
           onClose={handleCloseForm}
           onSubmit={handleSubmit}
           editingProduct={editingProduct}
-          projectId=""
+          projectId={activeProjectId ?? ''}
         />
       )}
     </PageContainer>

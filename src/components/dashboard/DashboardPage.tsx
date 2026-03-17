@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, LayoutDashboard, Brain, Target, Coins, Repeat, ArrowRight } from 'lucide-react';
+import { Plus, LayoutDashboard, Brain, Target, Coins, Repeat, ArrowRight, FolderOpen, Trash2 } from 'lucide-react';
 import type { GameGenre, TargetMarket } from '../../models';
-import { useProjectStore } from '../../stores/project-store';
+import { useProjectStore, MAX_PROJECTS } from '../../stores/project-store';
 import { useMindmapStore } from '../../stores/mindmap-store';
 import { GAME_GENRE_LABELS, TARGET_MARKET_LABELS } from '../../utils/constants';
 import PageContainer from '../layout/PageContainer';
@@ -116,16 +116,38 @@ export default function DashboardPage() {
   const projects = useProjectStore((s) => s.projects);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const createProject = useProjectStore((s) => s.createProject);
+  const switchProject = useProjectStore((s) => s.switchProject);
+  const deleteProject = useProjectStore((s) => s.deleteProject);
   const [showModal, setShowModal] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
 
   const handleCreate = useCallback(
     (name: string, genre: GameGenre, market: TargetMarket) => {
-      createProject(name, genre, market);
-      setShowModal(false);
+      try {
+        createProject(name, genre, market);
+        setShowModal(false);
+        setCreateError(null);
+      } catch (err) {
+        setCreateError(err instanceof Error ? err.message : '프로젝트 생성 실패');
+      }
     },
     [createProject],
+  );
+
+  const handleSwitch = useCallback(
+    (id: string) => {
+      switchProject(id);
+    },
+    [switchProject],
+  );
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      deleteProject(id);
+    },
+    [deleteProject],
   );
 
   return (
@@ -136,16 +158,74 @@ export default function DashboardPage() {
       exportName="대시보드"
     >
       {/* Header Action */}
-      <div className="flex justify-end mb-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="text-xs text-gray-400 dark:text-gray-500">
+          프로젝트 {projects.length}/{MAX_PROJECTS}
+        </div>
         <Button
           variant="primary"
           size="sm"
           icon={<Plus className="w-4 h-4" />}
           onClick={() => setShowModal(true)}
+          disabled={projects.length >= MAX_PROJECTS}
         >
           새 프로젝트
         </Button>
       </div>
+
+      {createError && (
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-950 rounded-lg text-sm text-red-700 dark:text-red-300">
+          {createError}
+        </div>
+      )}
+
+      {/* Project Switcher */}
+      {projects.length > 1 && (
+        <div className="mb-6 p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+          <div className="flex items-center gap-2 mb-3">
+            <FolderOpen className="w-4 h-4 text-gray-500" />
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">프로젝트 목록</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {projects.map((project) => {
+              const isActive = project.id === activeProjectId;
+              const genreLabel = GAME_GENRE_LABELS.get(project.gameGenre as GameGenre) ?? project.gameGenre;
+              return (
+                <div
+                  key={project.id}
+                  className={`
+                    flex items-center justify-between px-3 py-2.5 rounded-lg border transition-colors
+                    ${isActive
+                      ? 'border-brand-300 bg-brand-50 dark:border-brand-700 dark:bg-brand-950'
+                      : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 hover:border-brand-200 dark:hover:border-brand-800 cursor-pointer'
+                    }
+                  `.trim()}
+                  onClick={isActive ? undefined : () => handleSwitch(project.id)}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-medium truncate ${isActive ? 'text-brand-700 dark:text-brand-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {project.name}
+                      </span>
+                      {isActive && <Badge variant="primary" size="sm">활성</Badge>}
+                    </div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">{genreLabel}</span>
+                  </div>
+                  {!isActive && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
+                      className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-colors cursor-pointer"
+                      title="프로젝트 삭제"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {activeProject ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

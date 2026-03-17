@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Project, GameGenre, TargetMarket } from '../models';
+import { saveProjectSnapshot, loadProjectSnapshot, deleteProjectSnapshot } from '../utils/project-snapshot';
+
+const MAX_PROJECTS = 10;
 
 interface ProjectState {
   readonly projects: readonly Project[];
@@ -30,7 +33,7 @@ function generateId(): string {
 
 export const useProjectStore = create<ProjectStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
 
       createProject: (
@@ -38,6 +41,17 @@ export const useProjectStore = create<ProjectStore>()(
         genre: GameGenre,
         market: TargetMarket,
       ): Project => {
+        const state = get();
+
+        if (state.projects.length >= MAX_PROJECTS) {
+          throw new Error(`프로젝트는 최대 ${MAX_PROJECTS}개까지 생성할 수 있습니다.`);
+        }
+
+        // Save current project snapshot before creating new one
+        if (state.activeProjectId) {
+          saveProjectSnapshot(state.activeProjectId);
+        }
+
         const now = new Date().toISOString();
         const newProject: Project = {
           id: generateId(),
@@ -49,16 +63,22 @@ export const useProjectStore = create<ProjectStore>()(
           updatedAt: now,
         };
 
-        set((state) => ({
-          ...state,
-          projects: [...state.projects, newProject],
+        set((s) => ({
+          ...s,
+          projects: [...s.projects, newProject],
           activeProjectId: newProject.id,
         }));
+
+        // Load empty state for the new project
+        loadProjectSnapshot(newProject.id);
 
         return newProject;
       },
 
-      deleteProject: (id: string) =>
+      deleteProject: (id: string) => {
+        // Delete the project's snapshot
+        deleteProjectSnapshot(id);
+
         set((state) => {
           const filteredProjects = state.projects.filter((p) => p.id !== id);
           const newActiveId =
@@ -71,13 +91,32 @@ export const useProjectStore = create<ProjectStore>()(
             projects: filteredProjects,
             activeProjectId: newActiveId,
           };
-        }),
+        });
 
-      switchProject: (id: string) =>
-        set((state) => ({
-          ...state,
+        // Load the new active project's snapshot
+        const newActiveId = get().activeProjectId;
+        if (newActiveId) {
+          loadProjectSnapshot(newActiveId);
+        }
+      },
+
+      switchProject: (id: string) => {
+        const state = get();
+        if (state.activeProjectId === id) return;
+
+        // Save current project snapshot
+        if (state.activeProjectId) {
+          saveProjectSnapshot(state.activeProjectId);
+        }
+
+        set((s) => ({
+          ...s,
           activeProjectId: id,
-        })),
+        }));
+
+        // Load the target project's snapshot
+        loadProjectSnapshot(id);
+      },
     }),
     {
       name: 'paying-tool-projects',
@@ -88,3 +127,5 @@ export const useProjectStore = create<ProjectStore>()(
     },
   ),
 );
+
+export { MAX_PROJECTS };
