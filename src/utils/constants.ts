@@ -3,6 +3,7 @@ import type {
   UserSegment,
   RetentionStage,
   ProductCategory,
+  SalesTechnique,
   GameGenre,
   TargetMarket,
 } from '../models';
@@ -90,3 +91,10 @@ export const DEFAULT_CONVERSION_RATES: Record<FunnelStageName, number> = {
 } as const;
 
 export const KRW_USD_RATE = 1350;
+
+export const SALES_TECHNIQUE_LABELS: Map<SalesTechnique, string> = new Map([
+  ['standard', '일반 판매'],
+  ['relay', '릴레이 상품'],
+  ['popup', '팝업 상품'],
+  ['custom', '맞춤 상품'],
+]);

@@ -56,6 +56,8 @@ export const PRODUCT_RECOMMENDATION_PROMPT = `당신은 게임 유료화 전략 
     ],
     "valueMultiplier": 5.0,
     "purchaseLimit": {"type": "once | daily | weekly | monthly | unlimited", "maxCount": 1},
+    "salesTechnique": "standard | relay | popup | custom",
+    "isPaid": true,
     "isAiGenerated": true,
     "funnelStages": ["first_purchase"],
     "tags": ["첫구매", "할인"]
@@ -70,12 +72,18 @@ export const PRODUCT_RECOMMENDATION_PROMPT = `당신은 게임 유료화 전략 
 4. Whale: 프리미엄 팩, VIP $49.99~$99.99
 5. Super Whale: 최고가 독점 팩 $99.99+
 6. 가치 배수(valueMultiplier)는 실제 가격 대비 체감 가치
-7. 모든 상품명과 설명은 한국어로
+7. 모든 상품명(name)은 반드시 한국어로 작성하세요 (영문 금지)
 8. 최소 15개 이상의 상품을 추천하세요
 9. contents의 itemName은 게임 구조에서 추출한 재화/아이템 이름을 사용하세요
 10. 배틀패스/시즌패스(battle_pass) 상품은 반드시 1개 이상 포함하세요 - 패스 보상은 게임 시스템 기반으로 구성하세요
-11. 광고 제거(remove_ads) 상품을 반드시 포함하세요
-12. 오퍼월/보상형 광고 관련 상품을 포함하세요 (category: "other", 이름에 "오퍼월" 또는 "리워드" 포함)`;
+11. 광고 제거(remove_ads) 상품을 반드시 포함하세요 — 어떤 광고를 제거하는지(전면광고, 배너 등) description에 상세히 기술. isPaid: true
+12. 오퍼월/보상형 광고 상품을 반드시 포함하세요 — 게임 내 어디에 배치하면 효과적인지 description에 상세히 기술. isPaid: false
+13. salesTechnique 규칙:
+    - relay(릴레이): 전 단계 상품을 구매해야 다음 상품을 구매 가능한 연쇄 상품
+    - popup(팝업): 특정 확률에 따라 노출되는 한정 상품
+    - custom(맞춤): 사용자의 레벨, 전투력 등을 측정하여 필요한 상품을 제공하는 개인화 상품
+    - standard(일반): 상시 판매 상품
+    - 릴레이/팝업/맞춤 상품을 각각 최소 1개 이상 포함하세요`;
 
 export const SCHEMA_GENERATION_PROMPT = `당신은 게임 백엔드 데이터베이스 설계 전문가입니다. 다음 유료화 상품 목록과 게임 장르를 분석하고, 최적의 데이터베이스 스키마를 생성하세요.
 
@@ -155,17 +163,20 @@ export const SCHEMA_GENERATION_PROMPT = `당신은 게임 백엔드 데이터베
 9. 상품 간 관계(번들 구성, 가챠 풀 등)를 중간 테이블로 표현하세요.
 10. 불필요한 테이블은 생성하지 마세요. 상품 목록에 없는 유형의 테이블은 제외합니다.`;
 
-export const FUNNEL_STRATEGY_PROMPT = `당신은 게임 유저 퍼널 최적화 전문가입니다. 다음 게임 구조를 분석하고, 8단계 퍼널의 각 단계별 전략을 제안하세요.
+export const FUNNEL_STRATEGY_PROMPT = `당신은 게임 유저 퍼널 최적화 전문가입니다. 다음 게임 구조와 설계된 상품 목록을 분석하고, 8단계 퍼널의 각 단계별 전략을 제안하세요.
 
 게임 구조:
 {{GAME_STRUCTURE}}
 
-반드시 다음 JSON 배열 형식으로 응답하세요:
+현재 설계된 상품 목록:
+{{PRODUCTS}}
+
+반드시 다음 JSON 배열 형식으로 응답하세요. name은 반드시 아래 8가지 중 하나를 사용하세요:
 
 \`\`\`json
 [
   {
-    "name": "awareness | install | tutorial | first_session | retention | first_purchase | repeat_purchase | whale",
+    "name": "awareness | first_session | tutorial_complete | core_loop_engaged | first_purchase_prompt | first_purchase | repeat_purchase | subscription_or_vip",
     "labelKo": "단계명 (한국어)",
     "order": 0,
     "conversionRate": 100,
@@ -178,16 +189,17 @@ export const FUNNEL_STRATEGY_PROMPT = `당신은 게임 유저 퍼널 최적화 
 \`\`\`
 
 8단계 퍼널:
-1. 인지 (Awareness) - 100%
-2. 설치 (Install) - 30~50%
-3. 튜토리얼 (Tutorial) - 70~85%
-4. 첫 세션 (First Session) - 80~90%
-5. 리텐션 (Retention) - D7 기준 15~25%
-6. 첫 결제 (First Purchase) - 3~8%
-7. 반복 결제 (Repeat Purchase) - 첫 결제의 30~50%
-8. 고래화 (Whale) - 반복 결제의 5~10%
+1. 인지 (awareness) - 100%
+2. 첫 세션 (first_session) - 80~90%
+3. 튜토리얼 완료 (tutorial_complete) - 70~85%
+4. 코어루프 진입 (core_loop_engaged) - 50~70%
+5. 첫 구매 유도 (first_purchase_prompt) - 10~20%
+6. 첫 결제 (first_purchase) - 3~8%
+7. 반복 결제 (repeat_purchase) - 첫 결제의 30~50%
+8. 구독/VIP (subscription_or_vip) - 반복 결제의 5~10%
 
-전략은 해당 게임의 장르와 특성에 맞춰 구체적으로 작성하세요.`;
+전략은 해당 게임의 장르와 특성에 맞춰 구체적으로 작성하세요.
+상품 목록에서 각 퍼널 단계에 적합한 상품을 description에 언급하세요.`;
 
 export const PRODUCT_MIX_PROMPT = `당신은 게임 유료화 상품 구성 전문가입니다. 다음 게임 구조를 분석하고, 최적의 상품 믹스(유형별 매출 비율)를 추천하세요.
 

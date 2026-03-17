@@ -41,6 +41,8 @@ export interface ProductContent {
   readonly description: string;
 }
 
+export type SalesTechnique = 'standard' | 'relay' | 'popup' | 'custom';
+
 export interface PurchaseLimit {
   readonly type: 'once' | 'daily' | 'weekly' | 'monthly' | 'unlimited';
   readonly maxCount: number;
@@ -59,6 +61,8 @@ export interface Product {
   readonly contents: readonly ProductContent[];
   readonly purchaseLimit: PurchaseLimit;
   readonly funnelStageId: string | null;
+  readonly salesTechnique: SalesTechnique;
+  readonly isPaid: boolean;
   readonly sortOrder: number;
   readonly isActive: boolean;
   readonly createdAt: string;

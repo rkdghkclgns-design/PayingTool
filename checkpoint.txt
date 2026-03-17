@@ -1,0 +1,115 @@
+# PayingTool 체크포인트 — 발생 문제 및 재발 방지
+
+이 파일은 개발 중 발생한 모든 문제를 기록하며, 동일한 문제가 재발하지 않도록 합니다.
+새로운 문제가 발생하면 반드시 이 파일에 추가하세요.
+
+---
+
+## [문제 1] Google API 키 노출 → 자동 비활성화
+- 발생일: v5.3
+- 증상: 403 에러, "API 키가 Google에 의해 비활성화되었습니다"
+- 원인: API 키가 클라이언트 JavaScript 번들에 포함됨 → GitHub 공개 저장소에 푸시 → Google 스캐너가 감지 → 키 영구 비활성화
+- 시도한 해결:
+  - Base64 난독화 (v5.3) → 실패: Google 스캐너가 디코딩하여 감지
+  - Edge Function에 키 하드코딩 (v5.4 초기) → 실패: 역시 감지됨
+- 최종 해결: Supabase Edge Function + Supabase Secrets 환경변수
+  - API 키는 Supabase Dashboard > Edge Functions > Secrets에만 저장
+  - Edge Function 코드에서 Deno.env.get('GEMINI_API_KEY')로 읽음
+  - 클라이언트 코드, GitHub, 번들 어디에도 키 없음
+- 재발 방지:
+  - 절대 API 키를 소스코드에 넣지 않을 것 (Base64, 변수 분할 등도 불가)
+  - 새 키 발급 시 반드시 Supabase Secrets에만 설정
+  - 빌드 후 grep -r "AIzaSy" dist/ 검증 필수
+
+## [문제 2] Gemini REST API contents 형식 오류 → 400 에러
+- 발생일: v5.4
+- 증상: generativelanguage...generateContent responded with a status of 400
+- 원인: SDK에서 REST API 직접 호출로 전환 시 contents 형식 잘못됨
+  - 잘못된 형식: 여러 content 객체 [{parts:[{text}]}, {parts:[{inlineData}]}]
+  - 올바른 형식: 하나의 content에 여러 parts [{role:'user', parts:[{text}, {inlineData}]}]
+- 해결: 모든 API 호출에서 단일 content + role:'user' 사용
+- 재발 방지:
+  - Gemini REST API는 반드시 role 필드 포함
+  - 이미지+텍스트는 하나의 content 객체 안에 multiple parts로
+
+## [문제 3] isNonRetryableError의 'invalid' 매칭 과도
+- 발생일: v5.1 이전
+- 증상: "invalid JSON" 등 일반 에러도 재시도 없이 종료
+- 원인: msg.includes('invalid') — 너무 광범위한 문자열 매칭
+- 해결: 'invalid' 제거, 'API_KEY_INVALID'와 'PERMISSION_DENIED'만 체크
+- 재발 방지: 에러 매칭은 구체적인 에러 코드/문자열만 사용
+
+## [문제 4] 변경사항 미배포 ("반영 안되거 같아")
+- 발생일: v5
+- 증상: 코드 수정 완료했으나 사이트에 반영 안 됨
+- 원인: git commit/push를 하지 않음 → GitHub Actions 미실행
+- 해결: 모든 변경 후 반드시 commit + push
+- 재발 방지:
+  - 코드 변경 → 빌드 검증 → git commit → git push → 배포 확인
+  - 이 순서를 절대 건너뛰지 않을 것
+
+## [문제 5] 템플릿 가져오기 버튼 무반응
+- 발생일: v6.1 이전
+- 증상: "템플릿 가져오기" 클릭해도 아무 반응 없음
+- 원인: ID 기반 중복 체크 → 이미 로드된 상품은 무시 + 피드백 없음
+- 해결:
+  - 이름 기반 중복 체크로 변경
+  - 새 ID 생성 (generateProductId())
+  - 성공/실패 토스트 메시지 추가
+- 재발 방지: 사용자 액션에는 반드시 시각적 피드백 제공
+
+## [문제 6] PriceTierGuidance 문구 잘림
+- 발생일: v6.0 이전
+- 증상: 가격 전략 설명 텍스트가 "..." 으로 잘려서 표시
+- 원인: Tailwind truncate 클래스 적용
+- 해결: truncate → leading-relaxed
+- 재발 방지: 설명/description 필드에는 truncate 사용 자제
+
+## [문제 7] AI 분석 장르가 사용자 선택 장르를 덮어씀
+- 발생일: v5.2 이전
+- 증상: 마인드맵 분석 후 AI가 감지한 장르로 자동 변경됨
+- 원인: MindmapPage에서 setGenre(result.genre, 'mindmap') 호출
+- 해결: setGenre 호출 제거 → 장르는 장르 설계도에서만 수동 선택
+- 재발 방지: AI 분석 결과가 사용자 설정을 자동으로 덮어쓰면 안 됨
+
+## [문제 8] recommendProducts / suggestFunnelStrategies Dead Code
+- 발생일: v6.1 이전
+- 증상: AI 추천 상품에 구성품(contents)이 항상 비어있음, 퍼널 AI 추천 없음
+- 원인: gemini.ts에 함수가 구현되어 있으나 어디에서도 import/사용되지 않음
+- 해결: AiProductMixPanel에서 recommendProducts() 호출, FunnelDesignerPage에서 suggestFunnelStrategies() 호출
+- 재발 방지: 새 서비스 함수 작성 시 반드시 UI에 연결 확인
+
+## [문제 9] 프로젝트 데이터 격리 미작동
+- 발생일: v6.2 이전
+- 증상: 프로젝트 A, B 생성해도 모든 데이터가 공유됨
+- 원인: 각 스토어가 전역 단일 상태만 유지, projectId 필터링 없음
+- 해결: 프로젝트 스냅샷 시스템 — 전환 시 localStorage에 저장/복원
+- 재발 방지: 새 스토어 추가 시 project-snapshot.ts에도 반영할 것
+
+## [문제 10] Vite 빌드 exit code 127
+- 발생일: 지속적
+- 증상: npm run build가 exit code 127 반환하나 dist/ 정상 생성
+- 원인: Windows 환경의 shell 호환성 이슈 (실제 빌드 성공)
+- 해결: exit code 대신 ls dist/index.html로 빌드 성공 여부 확인
+- 재발 방지: Windows에서는 exit code만으로 판단하지 말고 출력물 존재 확인
+
+## [문제 11] Edge Function Secret 미적용 → 500 에러
+- 발생일: v6.2 직후
+- 증상: API 오류 (500): "API key not configured. Set GEMINI_API_KEY in Supabase Secrets."
+- 원인: Supabase Dashboard에서 GEMINI_API_KEY Secret을 설정하지 않았거나, 설정 후 Edge Function 재배포가 필요
+- 해결: Dashboard > Edge Functions > Secrets에서 GEMINI_API_KEY 설정 + Edge Function 재배포
+- 재발 방지:
+  - 새 API 키 발급 시: 1) Dashboard에서 Secret 설정 → 2) Edge Function 재배포 순서 준수
+  - Edge Function 재배포: deploy_edge_function MCP 도구 사용
+
+---
+
+## 체크리스트 — 모든 변경 시 확인
+
+- [ ] API 키가 소스코드/번들에 포함되지 않았는가?
+- [ ] TypeScript 타입 체크 통과 (npx tsc --noEmit)?
+- [ ] 빌드 성공 (dist/index.html 존재)?
+- [ ] 사용자 액션에 시각적 피드백 있는가?
+- [ ] AI 분석 결과가 사용자 설정을 덮어쓰지 않는가?
+- [ ] 새 스토어/데이터를 추가했다면 project-snapshot.ts에 반영했는가?
+- [ ] git commit + push 완료?

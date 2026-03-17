@@ -13,6 +13,7 @@ export type {
   ProductCategory,
   UserSegment,
   RetentionStage,
+  SalesTechnique,
   ProductContent,
   PurchaseLimit,
   Product,

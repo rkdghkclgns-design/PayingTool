@@ -113,19 +113,25 @@ export default function ProductBuilderPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [templateToast, setTemplateToast] = useState<string | null>(null);
+  const [paidFilter, setPaidFilter] = useState<'paid' | 'free'>('paid');
+
+  // 유료/비유료 분류
+  const paidProducts = useMemo(() => products.filter((p) => p.isPaid !== false), [products]);
+  const freeProducts = useMemo(() => products.filter((p) => p.isPaid === false), [products]);
+  const displayProducts = paidFilter === 'paid' ? paidProducts : freeProducts;
 
   const productCountBySegment = useMemo(() => {
     const counts = new Map<UserSegment, number>();
     ALL_SEGMENTS.forEach((seg) => {
-      const count = products.filter((p) => p.targetSegments.includes(seg)).length;
+      const count = displayProducts.filter((p) => p.targetSegments.includes(seg)).length;
       counts.set(seg, count);
     });
     return counts;
   }, [products]);
 
   const filteredProducts = useMemo(
-    () => products.filter((p) => p.targetSegments.includes(selectedSegment)),
-    [products, selectedSegment],
+    () => displayProducts.filter((p) => p.targetSegments.includes(selectedSegment)),
+    [displayProducts, selectedSegment],
   );
 
   const handleAdd = useCallback(() => {
@@ -196,6 +202,30 @@ export default function ProductBuilderPage() {
 
       {/* Product Reinforcement Guide */}
       <ProductReinforcementGuide products={products} genre={selectedGenre} />
+
+      {/* Paid / Free Tab */}
+      <div className="flex items-center gap-1 mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setPaidFilter('paid')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
+            paidFilter === 'paid'
+              ? 'bg-white dark:bg-gray-700 shadow-sm text-brand-600 dark:text-brand-400'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+          }`}
+        >
+          유료 상품 ({paidProducts.length})
+        </button>
+        <button
+          onClick={() => setPaidFilter('free')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
+            paidFilter === 'free'
+              ? 'bg-white dark:bg-gray-700 shadow-sm text-green-600 dark:text-green-400'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+          }`}
+        >
+          비유료 상품 ({freeProducts.length})
+        </button>
+      </div>
 
       {/* Segment Tabs */}
       <SegmentTabs

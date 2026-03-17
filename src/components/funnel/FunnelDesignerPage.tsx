@@ -233,38 +233,38 @@ export default function FunnelDesignerPage() {
     setAiFunnelError(null);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const aiStages: any[] = await suggestFunnelStrategies(structure);
+      const aiStages: any[] = await suggestFunnelStrategies(structure, products);
 
-      // AI 반환 단계를 스토어에 적용
+      // 먼저 기본 스테이지 리셋 후 AI 데이터를 한 번에 적용
       resetStages();
+      const defaultStages = useFunnelStore.getState().stages;
 
-      const currentStages = useFunnelStore.getState().stages;
-      for (const aiStage of aiStages) {
-        const stageName = aiStage.name as string;
-        const stageLabel = (aiStage.labelKo || aiStage.label || '') as string;
-        const matchedStage = currentStages.find((s) =>
-          s.name === stageName || s.label === stageLabel
+      // AI 반환 데이터로 기본 스테이지 업데이트 (한 번에 구성)
+      const mergedStages = defaultStages.map((stage) => {
+        const aiMatch = aiStages.find((ai: Record<string, unknown>) =>
+          ai.name === stage.name || ai.labelKo === stage.label
         );
-        if (matchedStage) {
-          updateStage(matchedStage.id, {
-            conversionRate: (aiStage.conversionRate ?? matchedStage.conversionRate) as number,
-            description: ((aiStage.notes || aiStage.targetKpi || matchedStage.description) as string),
-          });
-          if (stageLabel) {
-            updateStageLabel(matchedStage.id, stageLabel);
-          }
-        }
-      }
+        if (!aiMatch) return stage;
 
-      // 상품 자동 배치
-      const updatedStages = useFunnelStore.getState().stages;
-      for (const product of products) {
-        const targetStageName = CATEGORY_TO_STAGE[product.category] ?? 'first_purchase_prompt';
-        const stage = updatedStages.find((s) => s.name === targetStageName);
-        if (stage) {
-          assignProduct(stage.id, product.id);
-        }
-      }
+        // 상품 자동 배치 — 이 단계에 맞는 상품 ID 수집
+        const targetCategories = Object.entries(CATEGORY_TO_STAGE)
+          .filter(([, sName]) => sName === stage.name)
+          .map(([cat]) => cat);
+        const matchedProductIds = products
+          .filter((p) => targetCategories.includes(p.category))
+          .map((p) => p.id);
+
+        return {
+          ...stage,
+          label: (aiMatch.labelKo || aiMatch.label || stage.label) as string,
+          conversionRate: (aiMatch.conversionRate ?? stage.conversionRate) as number,
+          description: (aiMatch.notes || aiMatch.targetKpi || stage.description) as string,
+          assignedProductIds: [...stage.assignedProductIds, ...matchedProductIds],
+        };
+      });
+
+      // loadStages로 한 번에 적용 (UI 깜빡임 방지)
+      useFunnelStore.getState().loadStages(mergedStages);
 
       setSelectedStageId(null);
     } catch (err) {

@@ -1,6 +1,6 @@
 import { Pencil, Trash2, Package } from 'lucide-react';
 import type { Product } from '../../models';
-import { PRODUCT_CATEGORY_LABELS, RETENTION_STAGE_LABELS } from '../../utils/constants';
+import { PRODUCT_CATEGORY_LABELS, RETENTION_STAGE_LABELS, SALES_TECHNIQUE_LABELS } from '../../utils/constants';
 import { formatKRW, formatUSD } from '../../utils/formatters';
 import Badge from '../ui/Badge';
 
@@ -67,6 +67,17 @@ export default function ProductCard({ product, onEdit, onDelete }: ProductCardPr
       <div className="flex flex-wrap gap-1.5 mb-3">
         <Badge variant="primary" size="sm">{categoryLabel}</Badge>
         <Badge variant="warning" size="sm">{retentionLabel}</Badge>
+        {product.salesTechnique && product.salesTechnique !== 'standard' && (
+          <Badge
+            variant={product.salesTechnique === 'relay' ? 'danger' : product.salesTechnique === 'popup' ? 'primary' : 'success'}
+            size="sm"
+          >
+            {SALES_TECHNIQUE_LABELS.get(product.salesTechnique) ?? product.salesTechnique}
+          </Badge>
+        )}
+        {product.isPaid === false && (
+          <Badge variant="success" size="sm">비유료</Badge>
+        )}
       </div>
 
       {/* Price */}

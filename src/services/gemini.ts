@@ -219,9 +219,17 @@ export const recommendProductMix = async (
   });
 };
 
-export const suggestFunnelStrategies = async (structure: GameStructure): Promise<FunnelStage[]> => {
+export const suggestFunnelStrategies = async (
+  structure: GameStructure,
+  products?: readonly Product[],
+): Promise<FunnelStage[]> => {
   return retryWithBackoff(async () => {
-    const prompt = FUNNEL_STRATEGY_PROMPT.replace('{{GAME_STRUCTURE}}', JSON.stringify(structure, null, 2));
+    const productsSummary = products && products.length > 0
+      ? JSON.stringify(products.map((p) => ({ id: p.id, name: p.name, category: p.category, priceUSD: p.priceUSD })), null, 2)
+      : '[]';
+    const prompt = FUNNEL_STRATEGY_PROMPT
+      .replace('{{GAME_STRUCTURE}}', JSON.stringify(structure, null, 2))
+      .replace('{{PRODUCTS}}', productsSummary);
     const text = await callGemini([{ role: 'user', parts: [{ text: prompt }] }]);
     return parseJsonResponse<FunnelStage[]>(text);
   });
