@@ -1,14 +1,17 @@
 import { useState, useCallback } from 'react';
-import { Wand2, FileDown, Database } from 'lucide-react';
+import { Wand2, FileDown, Database, GitBranch, List } from 'lucide-react';
 import PageContainer from '../layout/PageContainer';
 import Button from '../ui/Button';
 import SchemaViewer from './SchemaViewer';
 import SchemaExporter from './SchemaExporter';
+import ErDiagram from './ErDiagram';
 import { useSchemaStore } from '../../stores/schema-store';
 import { useProductStore } from '../../stores/product-store';
 import { useMindmapStore } from '../../stores/mindmap-store';
 import { generateSchemasFromProducts } from '../../utils/schema-generator';
 import { DEFAULT_SCHEMAS } from '../../data/schema-templates';
+
+type ViewTab = 'list' | 'diagram';
 
 export default function DataSchemaPage() {
   const setSchemas = useSchemaStore((s) => s.setSchemas);
@@ -17,6 +20,7 @@ export default function DataSchemaPage() {
   const analysisResult = useMindmapStore((s) => s.analysisResult);
   const genre = analysisResult?.genre;
   const [selectedSchemaId, setSelectedSchemaId] = useState<string | null>(null);
+  const [viewTab, setViewTab] = useState<ViewTab>('list');
 
   const handleAutoGenerate = useCallback(() => {
     const generated = generateSchemasFromProducts(products, genre);
@@ -58,6 +62,33 @@ export default function DataSchemaPage() {
         >
           템플릿 로드
         </Button>
+
+        {/* View Tab Toggle */}
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 ml-2">
+          <button
+            onClick={() => setViewTab('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              viewTab === 'list'
+                ? 'bg-white dark:bg-gray-700 shadow-sm text-brand-600 dark:text-brand-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+            }`}
+          >
+            <List className="w-3.5 h-3.5" />
+            스키마 목록
+          </button>
+          <button
+            onClick={() => setViewTab('diagram')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              viewTab === 'diagram'
+                ? 'bg-white dark:bg-gray-700 shadow-sm text-brand-600 dark:text-brand-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+            }`}
+          >
+            <GitBranch className="w-3.5 h-3.5" />
+            데이터 구조도
+          </button>
+        </div>
+
         <div className="flex-1" />
         {schemas.length > 0 && (
           <div className="flex items-center gap-2">
@@ -70,8 +101,12 @@ export default function DataSchemaPage() {
         )}
       </div>
 
-      {/* Schema Viewer */}
-      <SchemaViewer selectedId={selectedSchemaId} onSelect={setSelectedSchemaId} />
+      {/* Content based on tab */}
+      {viewTab === 'list' ? (
+        <SchemaViewer selectedId={selectedSchemaId} onSelect={setSelectedSchemaId} />
+      ) : (
+        <ErDiagram schemas={schemas} />
+      )}
     </PageContainer>
   );
 }

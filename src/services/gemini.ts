@@ -224,11 +224,17 @@ interface ProductMixResponse {
 }
 
 export const recommendProductMix = async (
-  structure: GameStructure
+  structure: GameStructure,
+  userRequirements?: string,
 ): Promise<readonly ProductMixRecommendation[]> => {
   return retryWithBackoff(async () => {
     const model = createClient();
-    const prompt = PRODUCT_MIX_PROMPT.replace('{{GAME_STRUCTURE}}', JSON.stringify(structure, null, 2));
+    let prompt = PRODUCT_MIX_PROMPT.replace('{{GAME_STRUCTURE}}', JSON.stringify(structure, null, 2));
+
+    if (userRequirements && userRequirements.trim().length > 0) {
+      prompt += `\n\n[사용자 필수 요구사항]\n다음 요구사항을 반드시 반영하세요:\n${userRequirements.trim()}`;
+    }
+
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     const parsed = parseJsonResponse<ProductMixResponse>(text);

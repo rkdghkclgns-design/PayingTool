@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useCallback } from 'react';
 import {
   Swords,
   Puzzle,
@@ -13,11 +13,13 @@ import {
   Globe,
   Info,
   Sparkles,
+  CheckCircle2,
 } from 'lucide-react';
 import type { GenreBlueprint } from '../../models/genre-blueprint';
 import type { GameGenre } from '../../models/project';
 import { GENRE_BLUEPRINTS } from '../../data/genre-blueprints';
 import { useMindmapStore } from '../../stores/mindmap-store';
+import { useGenreStore } from '../../stores/genre-store';
 import PageContainer from '../layout/PageContainer';
 import Badge from '../ui/Badge';
 import BlueprintDetail from './BlueprintDetail';
@@ -50,10 +52,11 @@ interface GenreCardProps {
   readonly blueprint: GenreBlueprint;
   readonly isSelected: boolean;
   readonly isDetected: boolean;
+  readonly isGlobalGenre: boolean;
   readonly onSelect: () => void;
 }
 
-function GenreCard({ blueprint, isSelected, isDetected, onSelect }: GenreCardProps) {
+function GenreCard({ blueprint, isSelected, isDetected, isGlobalGenre, onSelect }: GenreCardProps) {
   const Icon = getGenreIcon(blueprint.genre);
 
   const borderClass = isSelected
@@ -76,6 +79,12 @@ function GenreCard({ blueprint, isSelected, isDetected, onSelect }: GenreCardPro
         <span className="absolute -top-2.5 -right-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-600 text-white shadow-sm">
           <Sparkles className="w-3 h-3" />
           AI 감지
+        </span>
+      )}
+      {isGlobalGenre && !isDetected && (
+        <span className="absolute -top-2.5 -right-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-600 text-white shadow-sm">
+          <CheckCircle2 className="w-3 h-3" />
+          기준 장르
         </span>
       )}
       <div className="flex items-center gap-3 mb-3">
@@ -122,37 +131,63 @@ function GenreCard({ blueprint, isSelected, isDetected, onSelect }: GenreCardPro
 // Page
 // ─────────────────────────────────────────────
 export default function GenreBlueprintPage() {
-  const [selectedGenre, setSelectedGenre] = useState<GenreBlueprint | null>(null);
+  const globalGenre = useGenreStore((s) => s.selectedGenre);
+  const setGenre = useGenreStore((s) => s.setGenre);
+  const clearGenre = useGenreStore((s) => s.clearGenre);
+
   const analysisResult = useMindmapStore((s) => s.analysisResult);
   const detectedGenre = analysisResult?.genre ?? null;
 
-  // Sort blueprints: detected genre first, rest in original order
-  const sortedBlueprints = useMemo(() => {
-    if (!detectedGenre) return GENRE_BLUEPRINTS;
-    const matched = GENRE_BLUEPRINTS.filter((bp) => bp.genre === detectedGenre);
-    const rest = GENRE_BLUEPRINTS.filter((bp) => bp.genre !== detectedGenre);
-    return [...matched, ...rest];
-  }, [detectedGenre]);
+  // Find the selected blueprint from global genre store
+  const selectedBlueprint = useMemo(
+    () => (globalGenre ? GENRE_BLUEPRINTS.find((bp) => bp.genre === globalGenre) ?? null : null),
+    [globalGenre],
+  );
 
-  const handleSelect = (blueprint: GenreBlueprint) => {
-    setSelectedGenre((prev) =>
-      prev?.id === blueprint.id ? null : blueprint,
-    );
-  };
+  // Sort blueprints: detected genre first, then global genre, rest in original order
+  const sortedBlueprints = useMemo(() => {
+    const priorityGenres = new Set<string>();
+    if (detectedGenre) priorityGenres.add(detectedGenre);
+    if (globalGenre && globalGenre !== detectedGenre) priorityGenres.add(globalGenre);
+
+    if (priorityGenres.size === 0) return GENRE_BLUEPRINTS;
+
+    const prioritized = GENRE_BLUEPRINTS.filter((bp) => priorityGenres.has(bp.genre));
+    const rest = GENRE_BLUEPRINTS.filter((bp) => !priorityGenres.has(bp.genre));
+    return [...prioritized, ...rest];
+  }, [detectedGenre, globalGenre]);
+
+  const handleSelect = useCallback((blueprint: GenreBlueprint) => {
+    if (globalGenre === blueprint.genre) {
+      clearGenre();
+    } else {
+      setGenre(blueprint.genre, 'manual');
+    }
+  }, [globalGenre, setGenre, clearGenre]);
 
   return (
     <PageContainer
       title="장르별 추천 설계도"
-      description="게임 장르별 최적화된 유료화 설계 전략을 확인하세요"
+      description="게임 장르를 선택하면 전체 메뉴에 기준으로 적용됩니다"
       exportId="page-blueprint"
       exportName="장르설계도"
     >
       {/* Info Banner when no analysis */}
-      {!analysisResult && (
+      {!analysisResult && !globalGenre && (
         <div className="flex items-center gap-2 px-4 py-3 mb-6 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950 dark:border-blue-800">
           <Info className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
           <p className="text-sm text-blue-700 dark:text-blue-300">
-            마인드맵을 분석하면 게임 장르가 자동 감지됩니다
+            장르를 선택하면 상품 설계, 퍼널, 지표 등 모든 메뉴에 기준으로 적용됩니다. 마인드맵을 분석하면 장르가 자동 감지됩니다.
+          </p>
+        </div>
+      )}
+
+      {/* Currently selected genre banner */}
+      {globalGenre && selectedBlueprint && (
+        <div className="flex items-center gap-2 px-4 py-3 mb-6 rounded-lg bg-brand-50 border border-brand-200 dark:bg-brand-950 dark:border-brand-800">
+          <CheckCircle2 className="w-4 h-4 text-brand-500 dark:text-brand-400 shrink-0" />
+          <p className="text-sm text-brand-700 dark:text-brand-300">
+            <strong>{selectedBlueprint.genreLabelKo}</strong> 장르가 전체 메뉴의 기준으로 설정되었습니다
           </p>
         </div>
       )}
@@ -163,15 +198,16 @@ export default function GenreBlueprintPage() {
           <GenreCard
             key={bp.id}
             blueprint={bp}
-            isSelected={selectedGenre?.id === bp.id}
+            isSelected={globalGenre === bp.genre}
             isDetected={bp.genre === detectedGenre}
+            isGlobalGenre={globalGenre === bp.genre}
             onSelect={() => handleSelect(bp)}
           />
         ))}
       </div>
 
       {/* Detail View */}
-      {selectedGenre && <BlueprintDetail blueprint={selectedGenre} />}
+      {selectedBlueprint && <BlueprintDetail blueprint={selectedBlueprint} />}
     </PageContainer>
   );
 }

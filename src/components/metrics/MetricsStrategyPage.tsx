@@ -1,6 +1,14 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { BarChart3, Sparkles } from 'lucide-react';
+import type { GameGenre } from '../../models/project';
+import { useGenreStore } from '../../stores/genre-store';
+import { useMetricsStore } from '../../stores/metrics-store';
+import { getGenreBlueprint } from '../../data/genre-blueprints/index';
+import { GAME_GENRE_LABELS } from '../../utils/constants';
 import PageContainer from '../layout/PageContainer';
 import Tabs from '../ui/Tabs';
+import Button from '../ui/Button';
+import Badge from '../ui/Badge';
 import RevenueSimulator from './RevenueSimulator';
 import ArpuDefensePanel from './ArpuDefensePanel';
 import SegmentTargetingPanel from './SegmentTargetingPanel';
@@ -13,6 +21,97 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id'];
 
+// ─────────────────────────────────────────────
+// Genre Benchmark Panel
+// ─────────────────────────────────────────────
+function GenreBenchmarkPanel() {
+  const selectedGenre = useGenreStore((s) => s.selectedGenre);
+  const genreSource = useGenreStore((s) => s.genreSource);
+  const updateMetric = useMetricsStore((s) => s.updateMetric);
+
+  const blueprint = useMemo(
+    () => (selectedGenre ? getGenreBlueprint(selectedGenre as GameGenre) : undefined),
+    [selectedGenre],
+  );
+
+  const genreLabel = selectedGenre
+    ? GAME_GENRE_LABELS.get(selectedGenre as GameGenre) ?? selectedGenre
+    : null;
+
+  const handleApplyBenchmarks = useCallback(() => {
+    if (!blueprint?.benchmarkKpis) return;
+    const kpis = blueprint.benchmarkKpis;
+
+    updateMetric('conversionRate', kpis.conversionRate.median / 100);
+    updateMetric('arpdau', kpis.arpdau.median);
+    updateMetric('arppu', kpis.arppu.median);
+    updateMetric('d1Retention', kpis.d1Retention.median / 100);
+    updateMetric('d7Retention', kpis.d7Retention.median / 100);
+    updateMetric('d30Retention', kpis.d30Retention.median / 100);
+
+    // Also set targets based on high values
+    updateMetric('targetConversion', kpis.conversionRate.high / 100);
+    updateMetric('targetD1Retention', kpis.d1Retention.high / 100);
+    updateMetric('targetD7Retention', kpis.d7Retention.high / 100);
+    updateMetric('targetD30Retention', kpis.d30Retention.high / 100);
+  }, [blueprint, updateMetric]);
+
+  if (!selectedGenre || !blueprint?.benchmarkKpis) {
+    return (
+      <div className="mb-6 p-4 rounded-xl bg-gray-50 border border-gray-200 dark:bg-gray-800/50 dark:border-gray-700">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-gray-400" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            장르 설계도에서 장르를 선택하면 KPI 벤치마크가 자동 적용됩니다
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const kpis = blueprint.benchmarkKpis;
+
+  return (
+    <div className="mb-6 p-4 rounded-xl bg-brand-50 border border-brand-200 dark:bg-brand-950 dark:border-brand-800">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-brand-500" />
+          <span className="text-sm font-semibold text-brand-700 dark:text-brand-300">
+            {genreLabel} 장르 KPI 벤치마크
+          </span>
+          {genreSource === 'mindmap' && (
+            <Badge variant="primary" size="sm">AI 감지</Badge>
+          )}
+        </div>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleApplyBenchmarks}
+          icon={<Sparkles className="w-3.5 h-3.5" />}
+        >
+          벤치마크 적용
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          { label: '전환율', value: `${kpis.conversionRate.median}%`, range: `${kpis.conversionRate.low}~${kpis.conversionRate.high}%` },
+          { label: 'ARPDAU', value: `$${kpis.arpdau.median.toFixed(2)}`, range: `$${kpis.arpdau.low.toFixed(2)}~${kpis.arpdau.high.toFixed(2)}` },
+          { label: 'ARPPU', value: `$${kpis.arppu.median.toFixed(0)}`, range: `$${kpis.arppu.low.toFixed(0)}~${kpis.arppu.high.toFixed(0)}` },
+          { label: 'D1 리텐션', value: `${kpis.d1Retention.median}%`, range: `${kpis.d1Retention.low}~${kpis.d1Retention.high}%` },
+          { label: 'D7 리텐션', value: `${kpis.d7Retention.median}%`, range: `${kpis.d7Retention.low}~${kpis.d7Retention.high}%` },
+          { label: 'D30 리텐션', value: `${kpis.d30Retention.median}%`, range: `${kpis.d30Retention.low}~${kpis.d30Retention.high}%` },
+        ].map((item) => (
+          <div key={item.label} className="text-center p-2 rounded-lg bg-white dark:bg-gray-900">
+            <div className="text-xs text-gray-500 dark:text-gray-400">{item.label}</div>
+            <div className="text-sm font-bold text-brand-700 dark:text-brand-300">{item.value}</div>
+            <div className="text-[10px] text-gray-400 dark:text-gray-500">{item.range}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function MetricsStrategyPage() {
   const [activeTab, setActiveTab] = useState<TabId>('simulator');
 
@@ -23,6 +122,9 @@ export default function MetricsStrategyPage() {
       exportId="page-metrics"
       exportName="지표전략"
     >
+      {/* Genre Benchmark Panel */}
+      <GenreBenchmarkPanel />
+
       <Tabs
         tabs={[...TABS]}
         activeTab={activeTab}

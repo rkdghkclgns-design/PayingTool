@@ -24,12 +24,12 @@ interface NavItem {
 
 const navItems: readonly NavItem[] = [
   { path: '/', label: '대시보드', icon: LayoutDashboard },
+  { path: '/blueprint', label: '장르 설계도', icon: Map },
   { path: '/mindmap', label: '마인드맵 분석', icon: Brain },
   { path: '/products', label: '상품 설계', icon: Package },
   { path: '/funnel', label: '퍼널 디자인', icon: Filter },
   { path: '/metrics', label: '지표 전략', icon: BarChart3 },
   { path: '/schema', label: '데이터 스키마', icon: Database },
-  { path: '/blueprint', label: '장르 설계도', icon: Map },
   { path: '/knowledge', label: '지식베이스', icon: BookOpen },
 ];
 
@@ -139,7 +139,7 @@ export default function Sidebar() {
             )}
           </button>
           <p className="text-xs text-gray-400 dark:text-gray-600">
-            PayingTool v3.0.0
+            PayingTool v5.0.0
           </p>
         </div>
       </aside>

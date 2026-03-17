@@ -17,11 +17,6 @@ export default function App() {
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/mindmap" element={<MindmapPage />} />
-          <Route path="/products" element={<ProductBuilderPage />} />
-          <Route path="/funnel" element={<FunnelDesignerPage />} />
-          <Route path="/metrics" element={<MetricsStrategyPage />} />
-          <Route path="/schema" element={<DataSchemaPage />} />
           <Route
             path="/blueprint"
             element={
@@ -30,6 +25,11 @@ export default function App() {
               </Suspense>
             }
           />
+          <Route path="/mindmap" element={<MindmapPage />} />
+          <Route path="/products" element={<ProductBuilderPage />} />
+          <Route path="/funnel" element={<FunnelDesignerPage />} />
+          <Route path="/metrics" element={<MetricsStrategyPage />} />
+          <Route path="/schema" element={<DataSchemaPage />} />
           <Route path="/knowledge" element={<KnowledgeBasePage />} />
         </Route>
       </Routes>

@@ -19,7 +19,7 @@ export const FUNNEL_STAGE_LABELS: Map<FunnelStageName, string> = new Map([
 ]);
 
 export const USER_SEGMENT_LABELS: Map<UserSegment, string> = new Map([
-  ['non_payer', '무과금'],
+  ['non_payer', 'NPU유도'],
   ['minnow', '소과금 (Minnow)'],
   ['dolphin', '중과금 (Dolphin)'],
   ['whale', '고과금 (Whale)'],

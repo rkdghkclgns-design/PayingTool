@@ -1,9 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { RotateCcw, Users, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
 import { useFunnelStore } from '../../stores/funnel-store';
 import { useProductStore } from '../../stores/product-store';
-import { useMindmapStore } from '../../stores/mindmap-store';
+import { useGenreStore } from '../../stores/genre-store';
 import { getGenreBlueprint } from '../../data/genre-blueprints/index';
+import { GAME_GENRE_LABELS } from '../../utils/constants';
+import type { GameGenre } from '../../models/project';
 import PageContainer from '../layout/PageContainer';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -12,16 +14,24 @@ import FunnelMetricsPanel from './FunnelMetricsPanel';
 import ProductAssignModal from './ProductAssignModal';
 
 // ─────────────────────────────────────────────
-// Funnel Tips Section (collapsible)
+// Genre Selector for Funnel Tips
+// ─────────────────────────────────────────────
+const GENRE_OPTIONS: readonly { value: string; label: string }[] = Array.from(
+  GAME_GENRE_LABELS.entries(),
+).filter(([key]) => key !== 'other').map(([key, label]) => ({ value: key, label }));
+
+// ─────────────────────────────────────────────
+// Funnel Tips Section (collapsible) with genre selector
 // ─────────────────────────────────────────────
 interface FunnelTipsSectionProps {
   readonly tips: readonly string[];
+  readonly selectedGenre: string | null;
+  readonly genreSource: 'manual' | 'mindmap';
+  readonly onGenreChange: (genre: string) => void;
 }
 
-function FunnelTipsSection({ tips }: FunnelTipsSectionProps) {
+function FunnelTipsSection({ tips, selectedGenre, genreSource, onGenreChange }: FunnelTipsSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-
-  if (tips.length === 0) return null;
 
   return (
     <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
@@ -35,9 +45,12 @@ function FunnelTipsSection({ tips }: FunnelTipsSectionProps) {
           <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">
             장르별 퍼널 팁
           </span>
-          <span className="text-xs text-amber-600 dark:text-amber-400">
-            ({tips.length}개)
-          </span>
+          {selectedGenre && (
+            <span className="text-xs text-amber-600 dark:text-amber-400">
+              ({tips.length}개)
+              {genreSource === 'mindmap' && ' · AI 감지'}
+            </span>
+          )}
         </div>
         {isExpanded ? (
           <ChevronUp className="w-4 h-4 text-amber-500" />
@@ -47,17 +60,41 @@ function FunnelTipsSection({ tips }: FunnelTipsSectionProps) {
       </button>
       {isExpanded && (
         <div className="px-4 pb-4">
-          <ul className="space-y-2">
-            {tips.map((tip) => (
-              <li
-                key={tip}
-                className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100"
-              >
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-amber-500 shrink-0" />
-                <span>{tip}</span>
-              </li>
-            ))}
-          </ul>
+          {/* Genre selector */}
+          <div className="mb-3">
+            <select
+              value={selectedGenre ?? ''}
+              onChange={(e) => onGenreChange(e.target.value)}
+              className="w-full sm:w-64 px-3 py-2 text-sm rounded-lg border border-amber-300 bg-white dark:bg-gray-900 dark:border-amber-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-400"
+            >
+              <option value="">장르를 선택하세요</option>
+              {GENRE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                  {opt.value === selectedGenre && genreSource === 'mindmap' ? ' (AI 감지)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tips list */}
+          {tips.length > 0 ? (
+            <ul className="space-y-2">
+              {tips.map((tip) => (
+                <li
+                  key={tip}
+                  className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100"
+                >
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-amber-500 shrink-0" />
+                  <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              장르를 선택하면 퍼널 전략 팁이 표시됩니다
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -80,11 +117,21 @@ export default function FunnelDesignerPage() {
     resetStages,
   } = useFunnelStore();
   const { products } = useProductStore();
-  const analysisResult = useMindmapStore((s) => s.analysisResult);
+  const selectedGenre = useGenreStore((s) => s.selectedGenre);
+  const genreSource = useGenreStore((s) => s.genreSource);
+  const setGenre = useGenreStore((s) => s.setGenre);
 
-  const detectedGenre = analysisResult?.genre ?? null;
-  const blueprint = detectedGenre ? getGenreBlueprint(detectedGenre) : undefined;
-  const funnelTips = blueprint?.funnelTips ?? [];
+  const blueprint = selectedGenre ? getGenreBlueprint(selectedGenre as GameGenre) : undefined;
+  const funnelTips = useMemo(() => blueprint?.funnelTips ?? [], [blueprint]);
+
+  const handleGenreChange = useCallback(
+    (genre: string) => {
+      if (genre) {
+        setGenre(genre, 'manual');
+      }
+    },
+    [setGenre],
+  );
 
   const [totalUsers, setTotalUsers] = useState('100000');
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
@@ -156,7 +203,12 @@ export default function FunnelDesignerPage() {
   return (
     <PageContainer title="퍼널 디자이너" description="사용자 전환 퍼널을 설계하고 각 단계에 상품을 배치합니다." exportId="page-funnel" exportName="퍼널디자이너">
       {/* Genre Funnel Tips */}
-      {funnelTips.length > 0 && <FunnelTipsSection tips={funnelTips} />}
+      <FunnelTipsSection
+        tips={funnelTips}
+        selectedGenre={selectedGenre}
+        genreSource={genreSource}
+        onGenreChange={handleGenreChange}
+      />
 
       {/* Top Controls */}
       <div className="flex items-end gap-4 mb-6">

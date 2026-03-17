@@ -321,6 +321,8 @@ function buildReportStyles(): string {
         background: #f8f9fa;
         line-height: 1.6;
         padding: 0;
+        word-break: keep-all;
+        overflow-wrap: break-word;
       }
       .report-container {
         max-width: 1000px;
@@ -355,6 +357,7 @@ function buildReportStyles(): string {
         background: #fafbfc;
         border-radius: 8px;
         border: 1px solid #e5e7eb;
+        overflow: hidden;
       }
       .section h2 {
         font-size: 20px;
@@ -395,12 +398,15 @@ function buildReportStyles(): string {
         font-weight: 600;
         color: #1f2937;
         margin-top: 2px;
+        word-break: break-all;
+        overflow-wrap: break-word;
       }
       table {
         width: 100%;
         border-collapse: collapse;
         margin-top: 8px;
         font-size: 13px;
+        table-layout: fixed;
       }
       thead th {
         background: #4f46e5;
@@ -415,6 +421,9 @@ function buildReportStyles(): string {
       tbody td {
         padding: 8px 12px;
         border-bottom: 1px solid #e5e7eb;
+        word-break: keep-all;
+        overflow-wrap: break-word;
+        white-space: pre-wrap;
       }
       tbody tr:nth-child(even) {
         background: #f9fafb;

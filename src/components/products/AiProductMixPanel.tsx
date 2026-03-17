@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Sparkles, ChevronDown, ChevronUp, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { Sparkles, ChevronDown, ChevronUp, RefreshCw, AlertCircle, CheckCircle2, MessageSquare } from 'lucide-react';
 import type { ProductMixRecommendation } from '../../services/gemini';
 import type { GameStructure } from '../../models/game-structure';
 import type { Product, ProductCategory } from '../../models';
@@ -99,6 +99,18 @@ const buildFallbackStructure = (): GameStructure | null => {
   };
 };
 
+// ─────────────────────────────────────────────
+// Custom Legend formatter
+// ─────────────────────────────────────────────
+function renderLegendText(value: string, entry: { payload?: { value?: number } }) {
+  const percentage = entry.payload?.value ?? 0;
+  return (
+    <span className="text-xs text-gray-700 dark:text-gray-300">
+      {value} ({percentage}%)
+    </span>
+  );
+}
+
 export default function AiProductMixPanel() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -106,6 +118,8 @@ export default function AiProductMixPanel() {
   const [mixHistory, setMixHistory] = useState<readonly (readonly ProductMixRecommendation[])[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [applySuccess, setApplySuccess] = useState<string | null>(null);
+  const [showRequirements, setShowRequirements] = useState(false);
+  const [userRequirements, setUserRequirements] = useState('');
 
   const analysisResult = useMindmapStore((s) => s.analysisResult);
   const addProduct = useProductStore((s) => s.addProduct);
@@ -128,7 +142,9 @@ export default function AiProductMixPanel() {
         setError('게임 구조 데이터가 없습니다. 마인드맵을 먼저 분석하거나 장르 블루프린트를 확인하세요.');
         return;
       }
-      const result = await recommendProductMix(structure);
+
+      const requirements = showRequirements ? userRequirements : undefined;
+      const result = await recommendProductMix(structure, requirements);
 
       // Prepend new result, cap at MAX_HISTORY (immutable)
       setMixHistory((prev) => {
@@ -143,7 +159,7 @@ export default function AiProductMixPanel() {
     } finally {
       setIsLoading(false);
     }
-  }, [analysisResult]);
+  }, [analysisResult, showRequirements, userRequirements]);
 
   const handleRetry = useCallback(() => {
     setError(null);
@@ -211,7 +227,7 @@ export default function AiProductMixPanel() {
   return (
     <Card className="mb-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-brand-500" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -236,6 +252,14 @@ export default function AiProductMixPanel() {
             </Button>
           )}
           <Button
+            variant={showRequirements ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setShowRequirements((prev) => !prev)}
+            icon={<MessageSquare className="w-4 h-4" />}
+          >
+            {showRequirements ? '요구사항 접기' : '요구사항 입력'}
+          </Button>
+          <Button
             variant="primary"
             size="sm"
             onClick={handleRequest}
@@ -259,6 +283,25 @@ export default function AiProductMixPanel() {
           )}
         </div>
       </div>
+
+      {/* User Requirements Input */}
+      {showRequirements && (
+        <div className="mt-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            추가 요구사항 (선택)
+          </label>
+          <textarea
+            value={userRequirements}
+            onChange={(e) => setUserRequirements(e.target.value)}
+            placeholder="예: 가챠를 반드시 포함해주세요, 구독 비중을 높게 해주세요, 광고 제거 상품도 추가해주세요..."
+            rows={3}
+            className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-brand-400 focus:border-brand-400 resize-none"
+          />
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            요구사항을 입력하면 AI가 해당 내용을 반영하여 상품 믹스를 추천합니다
+          </p>
+        </div>
+      )}
 
       {/* Success toast */}
       {applySuccess && (
@@ -326,22 +369,20 @@ export default function AiProductMixPanel() {
       {/* Results */}
       {currentRecommendations && isExpanded && !isLoading && (
         <div className="mt-6 space-y-6">
-          {/* Pie Chart */}
+          {/* Pie Chart with Legend (no inline labels to avoid clipping) */}
           <div className="flex justify-center">
-            <div className="w-full max-w-md" style={{ height: 300 }}>
+            <div className="w-full max-w-lg" style={{ height: 380 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={110}
+                    cy="40%"
+                    innerRadius={50}
+                    outerRadius={100}
                     paddingAngle={2}
                     dataKey="value"
                     nameKey="name"
-                    label={({ name, value }) => `${name} ${value}%`}
-                    labelLine={true}
                   >
                     {pieData.map((_entry, index) => (
                       <Cell
@@ -358,6 +399,12 @@ export default function AiProductMixPanel() {
                       borderRadius: '8px',
                       color: '#fff',
                     }}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    align="center"
+                    wrapperStyle={{ paddingTop: 16, fontSize: 12 }}
+                    formatter={renderLegendText}
                   />
                 </PieChart>
               </ResponsiveContainer>

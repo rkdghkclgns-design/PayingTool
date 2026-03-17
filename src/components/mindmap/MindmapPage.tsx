@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Brain } from 'lucide-react';
 import { useMindmapStore } from '../../stores/mindmap-store';
+import { useGenreStore } from '../../stores/genre-store';
 import { analyzeMindmapImage, analyzeMindmapText } from '../../services/gemini';
 import PageContainer from '../layout/PageContainer';
 import Card from '../ui/Card';
@@ -20,6 +21,8 @@ export default function MindmapPage() {
     clearAnalysis,
   } = useMindmapStore();
 
+  const setGenre = useGenreStore((s) => s.setGenre);
+
   const handleAnalyze = useCallback(async () => {
     if (!uploadedImage) return;
 
@@ -31,6 +34,11 @@ export default function MindmapPage() {
         ? await analyzeMindmapText(atob(uploadedImage.split(',')[1] ?? ''))
         : await analyzeMindmapImage(uploadedImage);
       setAnalysisResult(result);
+
+      // Auto-set genre in central genre store
+      if (result.genre) {
+        setGenre(result.genre, 'mindmap');
+      }
     } catch (err) {
       const message =
         err instanceof Error
@@ -38,7 +46,7 @@ export default function MindmapPage() {
           : 'AI 분석 중 알 수 없는 오류가 발생했습니다.';
       setAnalysisError(message);
     }
-  }, [uploadedImage, setAnalyzing, setAnalysisResult, setAnalysisError]);
+  }, [uploadedImage, setAnalyzing, setAnalysisResult, setAnalysisError, setGenre]);
 
   const handleRetry = useCallback(() => {
     handleAnalyze();
