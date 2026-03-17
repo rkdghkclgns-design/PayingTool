@@ -38,13 +38,16 @@ const TIER_STYLE: Readonly<Record<PriceTier['tier'], {
 };
 
 // ─────────────────────────────────────────────
-// Component
+// Component — 장르가 지정된 경우에만 렌더링
 // ─────────────────────────────────────────────
 export default function PriceTierGuidance() {
   const [isOpen, setIsOpen] = useState(false);
 
   const genre = useMindmapStore((s) => s.analysisResult?.genre);
   const blueprint = genre ? getGenreBlueprint(genre) : undefined;
+
+  // 장르가 지정되지 않으면 렌더링하지 않음
+  if (!blueprint) return null;
 
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
@@ -56,52 +59,44 @@ export default function PriceTierGuidance() {
       >
         {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         장르 가격 전략
-        {blueprint && (
-          <span className="ml-1 text-xs font-normal text-gray-500 dark:text-gray-400">
-            ({blueprint.genreLabelKo})
-          </span>
-        )}
+        <span className="ml-1 text-xs font-normal text-gray-500 dark:text-gray-400">
+          ({blueprint.genreLabelKo})
+        </span>
       </button>
 
       {/* Collapsible body */}
       {isOpen && (
         <div className="px-4 pb-4">
-          {!blueprint ? (
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              마인드맵을 분석하면 장르별 추천 가격 티어를 확인할 수 있습니다
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {blueprint.priceTiers.map((tier) => {
-                const style = TIER_STYLE[tier.tier];
-                const Icon = style.icon;
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {blueprint.priceTiers.map((tier) => {
+              const style = TIER_STYLE[tier.tier];
+              const Icon = style.icon;
 
-                return (
-                  <div
-                    key={tier.tier}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border ${style.card}`}
-                  >
-                    <div className={`w-7 h-7 shrink-0 rounded-md flex items-center justify-center ${style.iconBg}`}>
-                      <Icon className={`w-3.5 h-3.5 ${style.iconColor}`} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className={`text-xs font-semibold ${style.priceColor}`}>
-                          {tier.labelKo}
-                        </span>
-                        <span className={`text-xs font-medium ${style.priceColor}`}>
-                          ${tier.minUsd.toFixed(2)} - ${tier.maxUsd.toFixed(2)}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                        {tier.description}
-                      </p>
-                    </div>
+              return (
+                <div
+                  key={tier.tier}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border ${style.card}`}
+                >
+                  <div className={`w-7 h-7 shrink-0 rounded-md flex items-center justify-center ${style.iconBg}`}>
+                    <Icon className={`w-3.5 h-3.5 ${style.iconColor}`} />
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  <div className="min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className={`text-xs font-semibold ${style.priceColor}`}>
+                        {tier.labelKo}
+                      </span>
+                      <span className={`text-xs font-medium ${style.priceColor}`}>
+                        ${tier.minUsd.toFixed(2)} - ${tier.maxUsd.toFixed(2)}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                      {tier.description}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

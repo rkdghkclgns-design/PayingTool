@@ -37,6 +37,8 @@ export default function DataSchemaPage() {
     <PageContainer
       title="데이터 스키마"
       description="유료화 데이터 구조를 정의하고, SQL/TypeScript로 내보낼 수 있습니다."
+      exportId="page-schema"
+      exportName="데이터스키마"
     >
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 mb-6">

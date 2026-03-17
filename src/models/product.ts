@@ -11,6 +11,9 @@ export type ProductCategory =
   | 'boost'
   | 'bundle'
   | 'vip'
+  | 'probability_package'
+  | 'pass'
+  | 'remove_ads'
   | 'other';
 
 export type UserSegment =

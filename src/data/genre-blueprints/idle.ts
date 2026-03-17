@@ -3,8 +3,8 @@ import type { GenreBlueprint } from '../../models/genre-blueprint';
 export const IDLE_BLUEPRINT: GenreBlueprint = {
   id: 'bp-idle-001',
   genre: 'idle',
-  genreLabel: 'Idle / Clicker',
-  genreLabelKo: '아이들/클리커',
+  genreLabel: 'Idle / AFK',
+  genreLabelKo: '방치형/아이들',
   subGenres: ['Idle RPG', 'Idle Tycoon', 'Clicker', 'Incremental', 'Idle Merge'],
   productMix: [
     { type: 'rewarded_ads', label: 'Rewarded Video Ads', labelKo: '보상형 광고', recommendedPct: 35 },

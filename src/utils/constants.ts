@@ -51,6 +51,9 @@ export const PRODUCT_CATEGORY_LABELS: Map<ProductCategory, string> = new Map([
   ['boost', '부스트/버프'],
   ['bundle', '번들'],
   ['vip', 'VIP'],
+  ['probability_package', '확률 패키지'],
+  ['pass', '패스권'],
+  ['remove_ads', '광고 제거'],
   ['other', '기타'],
 ]);
 

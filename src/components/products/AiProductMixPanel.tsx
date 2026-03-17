@@ -1,19 +1,26 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Sparkles, ChevronDown, ChevronUp, RefreshCw, AlertCircle } from 'lucide-react';
+import { Sparkles, ChevronDown, ChevronUp, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { ProductMixRecommendation } from '../../services/gemini';
 import type { GameStructure } from '../../models/game-structure';
+import type { Product, ProductCategory } from '../../models';
 import { recommendProductMix } from '../../services/gemini';
 import { useMindmapStore } from '../../stores/mindmap-store';
+import { useProductStore } from '../../stores/product-store';
+import { useProjectStore } from '../../stores/project-store';
 import { GENRE_BLUEPRINTS } from '../../data/genre-blueprints';
+import { getGenreBlueprint } from '../../data/genre-blueprints/index';
+import { KRW_USD_RATE } from '../../utils/constants';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
 // ─────────────────────────────────────────────
-// Color palette for pie chart slices
+// Constants
 // ─────────────────────────────────────────────
+const MAX_HISTORY = 3;
+
 const PIE_COLORS: readonly string[] = [
   '#6366f1', // indigo
   '#f59e0b', // amber
@@ -26,6 +33,51 @@ const PIE_COLORS: readonly string[] = [
   '#3b82f6', // blue
   '#84cc16', // lime
 ] as const;
+
+// ─────────────────────────────────────────────
+// Recommendation type -> ProductCategory mapping
+// ─────────────────────────────────────────────
+const TYPE_TO_CATEGORY: Readonly<Record<string, ProductCategory>> = {
+  gacha: 'gacha',
+  battle_pass: 'battle_pass',
+  subscription: 'subscription',
+  currency_packs: 'currency_pack',
+  starter_pack: 'starter_pack',
+  cosmetics: 'cosmetic',
+  energy_stamina: 'energy',
+  progression_boost: 'boost',
+  bundles: 'bundle',
+  vip_membership: 'vip',
+  remove_ads: 'remove_ads',
+  season_content: 'limited_offer',
+  expansion_dlc: 'limited_offer',
+  rewarded_ads: 'other',
+  offerwalls: 'other',
+  loot_box: 'other',
+} as const;
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+function generateProductId(): string {
+  return `prod_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function mapTypeToCategory(type: string): ProductCategory {
+  return TYPE_TO_CATEGORY[type] ?? 'other';
+}
+
+function getStarterTierMidpointUsd(genre: string | undefined): number {
+  if (!genre) return 2.99;
+
+  const blueprint = getGenreBlueprint(genre as Parameters<typeof getGenreBlueprint>[0]);
+  if (!blueprint || blueprint.priceTiers.length === 0) return 2.99;
+
+  const starterTier = blueprint.priceTiers[0];
+  if (!starterTier) return 2.99;
+
+  return Math.round(((starterTier.minUsd + starterTier.maxUsd) / 2) * 100) / 100;
+}
 
 // ─────────────────────────────────────────────
 // Fallback: build a minimal GameStructure from the first available blueprint
@@ -51,12 +103,23 @@ export default function AiProductMixPanel() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [recommendations, setRecommendations] = useState<readonly ProductMixRecommendation[] | null>(null);
+  const [mixHistory, setMixHistory] = useState<readonly (readonly ProductMixRecommendation[])[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [applySuccess, setApplySuccess] = useState<string | null>(null);
 
   const analysisResult = useMindmapStore((s) => s.analysisResult);
+  const addProduct = useProductStore((s) => s.addProduct);
+  const activeProjectId = useProjectStore((s) => s.activeProjectId);
+
+  // Current recommendations based on active index
+  const currentRecommendations = useMemo(
+    () => (mixHistory.length > 0 ? mixHistory[activeIndex] ?? null : null),
+    [mixHistory, activeIndex],
+  );
 
   const handleRequest = useCallback(async () => {
     setError(null);
+    setApplySuccess(null);
     setIsLoading(true);
 
     try {
@@ -66,7 +129,13 @@ export default function AiProductMixPanel() {
         return;
       }
       const result = await recommendProductMix(structure);
-      setRecommendations(result);
+
+      // Prepend new result, cap at MAX_HISTORY (immutable)
+      setMixHistory((prev) => {
+        const updated = [result, ...prev];
+        return updated.length > MAX_HISTORY ? updated.slice(0, MAX_HISTORY) : updated;
+      });
+      setActiveIndex(0);
       setIsExpanded(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'AI 추천 요청에 실패했습니다.';
@@ -85,10 +154,59 @@ export default function AiProductMixPanel() {
     setIsExpanded((prev) => !prev);
   }, []);
 
-  const pieData = recommendations?.map((item) => ({
-    name: item.label,
-    value: item.percentage,
-  })) ?? [];
+  const handleSwitchHistory = useCallback((index: number) => {
+    setActiveIndex(index);
+    setApplySuccess(null);
+  }, []);
+
+  const handleApplyToProducts = useCallback(() => {
+    if (!currentRecommendations || currentRecommendations.length === 0) return;
+
+    const genre = analysisResult?.genre;
+    const midpointUsd = getStarterTierMidpointUsd(genre);
+    const midpointKrw = Math.round(midpointUsd * KRW_USD_RATE);
+    const projectId = activeProjectId ?? '';
+    const now = new Date().toISOString();
+
+    const newProducts: readonly Product[] = currentRecommendations.map((item, index) => ({
+      id: generateProductId(),
+      projectId,
+      name: item.label,
+      description: `AI 추천 상품 - ${item.rationale}`,
+      category: mapTypeToCategory(item.type),
+      priceKRW: midpointKrw,
+      priceUSD: midpointUsd,
+      targetSegments: ['minnow', 'dolphin'] as const,
+      targetRetentionStage: 'd7' as const,
+      contents: [],
+      purchaseLimit: { type: 'unlimited' as const, maxCount: 0 },
+      funnelStageId: null,
+      sortOrder: index,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    }));
+
+    for (const product of newProducts) {
+      addProduct(product);
+    }
+
+    setApplySuccess(`상품 ${newProducts.length}개가 추가되었습니다`);
+
+    // Auto-dismiss success message after 4 seconds
+    setTimeout(() => {
+      setApplySuccess(null);
+    }, 4000);
+  }, [currentRecommendations, analysisResult, activeProjectId, addProduct]);
+
+  const pieData = useMemo(
+    () =>
+      currentRecommendations?.map((item) => ({
+        name: item.label,
+        value: item.percentage,
+      })) ?? [],
+    [currentRecommendations],
+  );
 
   return (
     <Card className="mb-6">
@@ -107,6 +225,16 @@ export default function AiProductMixPanel() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {currentRecommendations && !isLoading && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleApplyToProducts}
+              icon={<CheckCircle2 className="w-4 h-4" />}
+            >
+              상품에 반영
+            </Button>
+          )}
           <Button
             variant="primary"
             size="sm"
@@ -116,7 +244,7 @@ export default function AiProductMixPanel() {
           >
             {isLoading ? '분석 중...' : 'AI 추천 요청'}
           </Button>
-          {recommendations && (
+          {currentRecommendations && (
             <button
               onClick={toggleExpand}
               className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
@@ -131,6 +259,38 @@ export default function AiProductMixPanel() {
           )}
         </div>
       </div>
+
+      {/* Success toast */}
+      {applySuccess && (
+        <div className="mt-3 p-3 bg-green-50 dark:bg-green-950 rounded-lg flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+          <span className="text-sm font-medium text-green-700 dark:text-green-300">
+            {applySuccess}
+          </span>
+        </div>
+      )}
+
+      {/* History tabs */}
+      {mixHistory.length > 1 && !isLoading && (
+        <div className="mt-4 flex items-center gap-2">
+          {mixHistory.map((_entry, index) => (
+            <button
+              key={`history-tab-${index}`}
+              onClick={() => handleSwitchHistory(index)}
+              className={`
+                px-3 py-1.5 text-sm font-medium rounded-lg transition-colors cursor-pointer
+                ${
+                  index === activeIndex
+                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-900 dark:text-brand-300'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+                }
+              `.trim()}
+            >
+              추천 {index + 1}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Loading state */}
       {isLoading && (
@@ -164,7 +324,7 @@ export default function AiProductMixPanel() {
       )}
 
       {/* Results */}
-      {recommendations && isExpanded && !isLoading && (
+      {currentRecommendations && isExpanded && !isLoading && (
         <div className="mt-6 space-y-6">
           {/* Pie Chart */}
           <div className="flex justify-center">
@@ -206,7 +366,7 @@ export default function AiProductMixPanel() {
 
           {/* Recommendation cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {recommendations.map((item, index) => (
+            {currentRecommendations.map((item, index) => (
               <div
                 key={item.type}
                 className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50"

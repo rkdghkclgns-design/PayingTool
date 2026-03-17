@@ -48,6 +48,8 @@ export default function MindmapPage() {
     <PageContainer
       title="마인드맵 분석기"
       description="게임 구조 마인드맵을 업로드하면 AI가 유료화 구조를 자동으로 분석합니다"
+      exportId="page-mindmap"
+      exportName="마인드맵분석"
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Uploader / Preview */}

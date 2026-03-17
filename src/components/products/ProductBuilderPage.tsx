@@ -79,7 +79,7 @@ export default function ProductBuilderPage() {
   }, []);
 
   return (
-    <PageContainer title="상품 빌더" description="인앱 상품을 설계하고 가격 전략을 수립합니다.">
+    <PageContainer title="상품 빌더" description="인앱 상품을 설계하고 가격 전략을 수립합니다." exportId="page-products" exportName="상품빌더">
       {/* AI Product Mix Recommendation */}
       <AiProductMixPanel />
 

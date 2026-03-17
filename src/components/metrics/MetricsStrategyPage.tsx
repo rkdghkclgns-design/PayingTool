@@ -20,6 +20,8 @@ export default function MetricsStrategyPage() {
     <PageContainer
       title="지표 전략"
       description="핵심 성과 지표(KPI) 시뮬레이션과 ARPU 방어 전략을 수립합니다."
+      exportId="page-metrics"
+      exportName="지표전략"
     >
       <Tabs
         tabs={[...TABS]}

@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
-import { RotateCcw, Users } from 'lucide-react';
+import { RotateCcw, Users, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
 import { useFunnelStore } from '../../stores/funnel-store';
 import { useProductStore } from '../../stores/product-store';
+import { useMindmapStore } from '../../stores/mindmap-store';
+import { getGenreBlueprint } from '../../data/genre-blueprints/index';
 import PageContainer from '../layout/PageContainer';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -9,6 +11,62 @@ import FunnelCanvas from './FunnelCanvas';
 import FunnelMetricsPanel from './FunnelMetricsPanel';
 import ProductAssignModal from './ProductAssignModal';
 
+// ─────────────────────────────────────────────
+// Funnel Tips Section (collapsible)
+// ─────────────────────────────────────────────
+interface FunnelTipsSectionProps {
+  readonly tips: readonly string[];
+}
+
+function FunnelTipsSection({ tips }: FunnelTipsSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  if (tips.length === 0) return null;
+
+  return (
+    <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
+      <button
+        type="button"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        className="flex items-center justify-between w-full px-4 py-3 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <Lightbulb className="w-4 h-4 text-amber-500" />
+          <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+            장르별 퍼널 팁
+          </span>
+          <span className="text-xs text-amber-600 dark:text-amber-400">
+            ({tips.length}개)
+          </span>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4 text-amber-500" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-amber-500" />
+        )}
+      </button>
+      {isExpanded && (
+        <div className="px-4 pb-4">
+          <ul className="space-y-2">
+            {tips.map((tip) => (
+              <li
+                key={tip}
+                className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100"
+              >
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-amber-500 shrink-0" />
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Funnel Designer Page
+// ─────────────────────────────────────────────
 export default function FunnelDesignerPage() {
   const {
     stages,
@@ -22,6 +80,11 @@ export default function FunnelDesignerPage() {
     resetStages,
   } = useFunnelStore();
   const { products } = useProductStore();
+  const analysisResult = useMindmapStore((s) => s.analysisResult);
+
+  const detectedGenre = analysisResult?.genre ?? null;
+  const blueprint = detectedGenre ? getGenreBlueprint(detectedGenre) : undefined;
+  const funnelTips = blueprint?.funnelTips ?? [];
 
   const [totalUsers, setTotalUsers] = useState('100000');
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
@@ -91,7 +154,10 @@ export default function FunnelDesignerPage() {
     : null;
 
   return (
-    <PageContainer title="퍼널 디자이너" description="사용자 전환 퍼널을 설계하고 각 단계에 상품을 배치합니다.">
+    <PageContainer title="퍼널 디자이너" description="사용자 전환 퍼널을 설계하고 각 단계에 상품을 배치합니다." exportId="page-funnel" exportName="퍼널디자이너">
+      {/* Genre Funnel Tips */}
+      {funnelTips.length > 0 && <FunnelTipsSection tips={funnelTips} />}
+
       {/* Top Controls */}
       <div className="flex items-end gap-4 mb-6">
         <div className="flex items-end gap-2">
