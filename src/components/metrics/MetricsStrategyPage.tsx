@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, Sparkles } from 'lucide-react';
 import type { GameGenre } from '../../models/project';
 import { useGenreStore } from '../../stores/genre-store';
@@ -38,7 +38,7 @@ function GenreBenchmarkPanel() {
     ? GAME_GENRE_LABELS.get(selectedGenre as GameGenre) ?? selectedGenre
     : null;
 
-  const handleApplyBenchmarks = useCallback(() => {
+  const applyBenchmarks = useCallback(() => {
     if (!blueprint?.benchmarkKpis) return;
     const kpis = blueprint.benchmarkKpis;
 
@@ -49,12 +49,25 @@ function GenreBenchmarkPanel() {
     updateMetric('d7Retention', kpis.d7Retention.median / 100);
     updateMetric('d30Retention', kpis.d30Retention.median / 100);
 
-    // Also set targets based on high values
+    // 목표 KPI: high 값 기반
     updateMetric('targetConversion', kpis.conversionRate.high / 100);
     updateMetric('targetD1Retention', kpis.d1Retention.high / 100);
     updateMetric('targetD7Retention', kpis.d7Retention.high / 100);
     updateMetric('targetD30Retention', kpis.d30Retention.high / 100);
+    updateMetric('targetArpu', kpis.arpdau.high);
+    updateMetric('targetLtv', Math.round(kpis.arpdau.high * 30 * 100) / 100);
   }, [blueprint, updateMetric]);
+
+  // 장르 변경 시 자동으로 KPI 벤치마크 적용
+  const prevGenreRef = useRef(selectedGenre);
+  useEffect(() => {
+    if (selectedGenre && selectedGenre !== prevGenreRef.current) {
+      applyBenchmarks();
+    }
+    prevGenreRef.current = selectedGenre;
+  }, [selectedGenre, applyBenchmarks]);
+
+  const handleApplyBenchmarks = applyBenchmarks;
 
   if (!selectedGenre || !blueprint?.benchmarkKpis) {
     return (

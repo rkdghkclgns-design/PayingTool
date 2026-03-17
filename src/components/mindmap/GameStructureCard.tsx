@@ -8,6 +8,7 @@ import {
   Swords,
 } from 'lucide-react';
 import type { GameStructure, GameCurrency } from '../../models';
+import { useGenreStore } from '../../stores/genre-store';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 
@@ -116,17 +117,20 @@ function CurrencyTable({ currencies }: { readonly currencies: readonly GameCurre
 }
 
 export default function GameStructureCard({ structure }: GameStructureCardProps) {
+  const selectedGenre = useGenreStore((s) => s.selectedGenre);
+  const displayGenre = selectedGenre ?? structure.genre;
+
   return (
     <Card
       title="게임 구조 분석 결과"
       subtitle="AI가 마인드맵에서 추출한 게임 유료화 구조"
     >
       <div className="space-y-6">
-        {/* Genre */}
+        {/* Genre — 장르 설계도에서 지정한 값 우선 */}
         <div>
           <SectionHeader icon={Gamepad2} title="장르" />
           <Badge variant="primary" size="md">
-            {GENRE_LABELS[structure.genre] ?? structure.genre}
+            {GENRE_LABELS[displayGenre] ?? displayGenre}
           </Badge>
         </div>
 
