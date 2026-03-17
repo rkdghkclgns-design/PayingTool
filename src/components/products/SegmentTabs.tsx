@@ -9,6 +9,7 @@ interface SegmentTabsProps {
 }
 
 const ALL_SEGMENTS: readonly UserSegment[] = [
+  'offerwall',
   'non_payer',
   'minnow',
   'dolphin',

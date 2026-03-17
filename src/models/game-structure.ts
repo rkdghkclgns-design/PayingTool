@@ -7,6 +7,13 @@ export interface GameCurrency {
   readonly purchasable: boolean;
 }
 
+export interface AdPlacement {
+  readonly location: string;
+  readonly adType: string;
+  readonly reward: string;
+  readonly description: string;
+}
+
 export interface GameStructure {
   readonly genre: GameGenre;
   readonly coreLoop: string;
@@ -16,5 +23,6 @@ export interface GameStructure {
   readonly currencies: readonly GameCurrency[];
   readonly retentionHooks: readonly string[];
   readonly competitiveElements: readonly string[];
+  readonly adPlacements: readonly AdPlacement[];
   readonly rawAnalysis: string;
 }

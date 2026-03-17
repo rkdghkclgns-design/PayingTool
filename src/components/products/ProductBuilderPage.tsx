@@ -16,7 +16,7 @@ import ProductForm from './ProductForm';
 
 type ViewMode = 'grid' | 'list';
 
-const ALL_SEGMENTS: readonly UserSegment[] = ['non_payer', 'minnow', 'dolphin', 'whale', 'super_whale'];
+const ALL_SEGMENTS: readonly UserSegment[] = ['offerwall', 'non_payer', 'minnow', 'dolphin', 'whale', 'super_whale'];
 
 export default function ProductBuilderPage() {
   const { products, selectedSegment, addProduct, updateProduct, deleteProduct, setSelectedSegment } = useProductStore();

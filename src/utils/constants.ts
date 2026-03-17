@@ -19,6 +19,7 @@ export const FUNNEL_STAGE_LABELS: Map<FunnelStageName, string> = new Map([
 ]);
 
 export const USER_SEGMENT_LABELS: Map<UserSegment, string> = new Map([
+  ['offerwall', '오퍼월/광고'],
   ['non_payer', 'NPU유도'],
   ['minnow', '소과금 (Minnow)'],
   ['dolphin', '중과금 (Dolphin)'],

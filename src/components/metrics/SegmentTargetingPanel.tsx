@@ -22,6 +22,7 @@ const SEGMENTS: readonly UserSegment[] = [
 ];
 
 const SEGMENT_COLORS: Record<UserSegment, string> = {
+  offerwall: '#f97316',
   non_payer: '#94a3b8',
   minnow: '#60a5fa',
   dolphin: '#a78bfa',
@@ -30,6 +31,7 @@ const SEGMENT_COLORS: Record<UserSegment, string> = {
 };
 
 const DEFAULT_PERCENTAGES: Record<UserSegment, number> = {
+  offerwall: 0,
   non_payer: 70,
   minnow: 20,
   dolphin: 7,
@@ -38,6 +40,7 @@ const DEFAULT_PERCENTAGES: Record<UserSegment, number> = {
 };
 
 const AVG_SPEND: Record<UserSegment, number> = {
+  offerwall: 0,
   non_payer: 0,
   minnow: 5,
   dolphin: 30,

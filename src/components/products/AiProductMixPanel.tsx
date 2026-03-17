@@ -169,6 +169,7 @@ const buildFallbackStructure = (): GameStructure | null => {
     currencies: [],
     retentionHooks: blueprint.funnelTips,
     competitiveElements: [],
+    adPlacements: [],
     rawAnalysis: `${blueprint.genreLabelKo} 장르 블루프린트 기반 자동 생성`,
   };
 };

@@ -120,7 +120,7 @@ export default function PriceTierGuidance() {
                         ${tier.minUsd.toFixed(2)} - ${tier.maxUsd.toFixed(2)}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
                       {tier.description}
                     </p>
                   </div>

@@ -6,6 +6,7 @@ import {
   Coins,
   Anchor,
   Swords,
+  Megaphone,
 } from 'lucide-react';
 import type { GameStructure, GameCurrency } from '../../models';
 import { useGenreStore } from '../../stores/genre-store';
@@ -209,6 +210,34 @@ export default function GameStructureCard({ structure }: GameStructureCardProps)
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {/* Ad Placements */}
+        {structure.adPlacements && structure.adPlacements.length > 0 && (
+          <div>
+            <SectionHeader icon={Megaphone} title="보상형 광고 배치 추천" />
+            <div className="grid grid-cols-1 gap-3">
+              {structure.adPlacements.map((ad, idx) => (
+                <div
+                  key={`ad-${idx}`}
+                  className="p-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800"
+                >
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                      {ad.location}
+                    </span>
+                    <Badge variant="warning" size="sm">{ad.adType}</Badge>
+                  </div>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mb-1">
+                    보상: {ad.reward}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {ad.description}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

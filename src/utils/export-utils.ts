@@ -13,6 +13,7 @@ import {
   GAME_GENRE_LABELS,
 } from './constants';
 import { formatKRW, formatUSD, formatPercent, formatNumber } from './formatters';
+import { buildErDiagram, getTableColor, HEADER_HEIGHT, FIELD_HEIGHT } from './er-diagram-utils';
 
 /**
  * Capture a DOM element by ID and download it as a PNG image.
@@ -139,6 +140,22 @@ function buildAnalysisSection(analysis: GameStructure): string {
       ${analysis.competitiveElements.length > 0 ? `
       <h3>경쟁 요소</h3>
       <ul class="feature-list competitive-list">${competitiveList}</ul>
+      ` : ''}
+
+      ${analysis.adPlacements && analysis.adPlacements.length > 0 ? `
+      <h3>보상형 광고 배치 추천</h3>
+      <div class="ad-placements">
+        ${analysis.adPlacements.map((ad) => `
+          <div class="ad-card">
+            <div class="ad-header">
+              <span class="ad-location">${ad.location}</span>
+              <span class="ad-type-badge">${ad.adType}</span>
+            </div>
+            <p class="ad-reward">보상: ${ad.reward}</p>
+            <p class="ad-desc">${ad.description}</p>
+          </div>
+        `).join('')}
+      </div>
       ` : ''}
     </section>`;
 }
@@ -325,6 +342,59 @@ function buildSchemaSection(schemas: readonly DataSchema[]): string {
       <h2>5. 데이터 스키마</h2>
       <p class="summary">총 ${schemas.length}개 테이블</p>
       ${schemaTables}
+    </section>`;
+}
+
+/**
+ * Build ER Diagram as static SVG for report.
+ */
+function buildErDiagramSection(schemas: readonly DataSchema[]): string {
+  if (schemas.length === 0) return '';
+
+  const { nodes, relations, totalWidth, totalHeight } = buildErDiagram(schemas);
+  const viewBoxWidth = Math.max(totalWidth, 600);
+  const viewBoxHeight = Math.max(totalHeight, 400);
+
+  const nodesSvg = nodes.map((node, idx) => {
+    const color = getTableColor(idx);
+    const fieldsSvg = node.fields.map((field, fIdx) => {
+      const y = HEADER_HEIGHT + fIdx * FIELD_HEIGHT + FIELD_HEIGHT / 2;
+      const icon = field.isPrimaryKey ? '🔑 ' : field.isForeignKey ? '🔗 ' : '';
+      const divider = fIdx > 0 ? `<line x1="8" y1="${HEADER_HEIGHT + fIdx * FIELD_HEIGHT}" x2="${node.width - 8}" y2="${HEADER_HEIGHT + fIdx * FIELD_HEIGHT}" stroke="#e5e7eb" stroke-width="0.5"/>` : '';
+      return `${divider}<text x="12" y="${y}" dominant-baseline="central" fill="#374151" font-size="11" font-family="monospace">${icon}${field.name}</text><text x="${node.width - 12}" y="${y}" text-anchor="end" dominant-baseline="central" fill="#9ca3af" font-size="10" font-family="monospace">${field.type}</text>`;
+    }).join('');
+
+    return `<g transform="translate(${node.x}, ${node.y})"><rect x="2" y="2" width="${node.width}" height="${node.height}" rx="8" fill="rgba(0,0,0,0.08)"/><rect width="${node.width}" height="${node.height}" rx="8" fill="#fff" stroke="${color}" stroke-width="2"/><rect width="${node.width}" height="${HEADER_HEIGHT}" rx="8" fill="${color}"/><rect y="${HEADER_HEIGHT - 8}" width="${node.width}" height="8" fill="${color}"/><text x="${node.width / 2}" y="${HEADER_HEIGHT / 2 + 1}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="13" font-weight="700" font-family="monospace">${node.name}</text>${fieldsSvg}</g>`;
+  }).join('');
+
+  const relationsSvg = relations.map((rel) => {
+    const fromNode = nodes.find((n) => n.name === rel.from);
+    const toNode = nodes.find((n) => n.name === rel.to);
+    if (!fromNode || !toNode) return '';
+    const fCx = fromNode.x + fromNode.width / 2;
+    const fCy = fromNode.y + fromNode.height / 2;
+    const tCx = toNode.x + toNode.width / 2;
+    const tCy = toNode.y + toNode.height / 2;
+    const [sx, sy, ex, ey] = fCx < tCx
+      ? [fromNode.x + fromNode.width, fCy, toNode.x, tCy]
+      : [fromNode.x, fCy, toNode.x + toNode.width, tCy];
+    const mx = (sx + ex) / 2;
+    const ly = (sy + ey) / 2 - 8;
+    const dash = rel.type === 'N:M' ? ' stroke-dasharray="6 4"' : '';
+    return `<path d="M ${sx} ${sy} C ${mx} ${sy}, ${mx} ${ey}, ${ex} ${ey}" fill="none" stroke="#94a3b8" stroke-width="1.5"${dash} marker-end="url(#ah)"/><rect x="${mx - 16}" y="${ly - 8}" width="32" height="16" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="0.5"/><text x="${mx}" y="${ly}" text-anchor="middle" dominant-baseline="central" fill="#64748b" font-size="9" font-weight="600" font-family="monospace">${rel.type}</text>`;
+  }).join('');
+
+  return `
+    <section class="section">
+      <h2>6. 데이터 구조도 (ER Diagram)</h2>
+      <p class="summary">테이블 ${nodes.length}개, 관계 ${relations.length}개</p>
+      <div style="overflow-x: auto;">
+        <svg viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" style="width: 100%; min-height: 300px; max-height: 600px;">
+          <defs><marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/></marker></defs>
+          ${relationsSvg}
+          ${nodesSvg}
+        </svg>
+      </div>
     </section>`;
 }
 
@@ -570,6 +640,26 @@ function buildReportStyles(): string {
       .badge-soft { background: #d1fae5; color: #065f46; }
       .badge-premium { background: #ede9fe; color: #5b21b6; }
       .badge-event { background: #fce7f3; color: #9d174d; }
+      .ad-placements { display: grid; gap: 8px; }
+      .ad-card {
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #fbbf24;
+        background: #fffbeb;
+      }
+      .ad-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+      .ad-location { font-size: 13px; font-weight: 600; color: #92400e; }
+      .ad-type-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .ad-reward { font-size: 12px; color: #b45309; margin-bottom: 4px; }
+      .ad-desc { font-size: 12px; color: #6b7280; line-height: 1.6; }
       ul {
         list-style: none;
         padding-left: 0;
@@ -649,6 +739,7 @@ export function downloadReport(): void {
     ${buildFunnelSection(stages, products)}
     ${buildMetricsSection(metricsConfig)}
     ${buildSchemaSection(schemas)}
+    ${buildErDiagramSection(schemas)}
 
     <footer class="report-footer">
       <p>PayingTool &mdash; 게임 과금 설계 도구</p>

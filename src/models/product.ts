@@ -17,6 +17,7 @@ export type ProductCategory =
   | 'other';
 
 export type UserSegment =
+  | 'offerwall'
   | 'non_payer'
   | 'minnow'
   | 'dolphin'
