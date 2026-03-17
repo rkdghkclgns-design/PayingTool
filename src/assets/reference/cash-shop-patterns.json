@@ -1,0 +1,473 @@
+{
+  "market": "cn",
+  "title": "깜짝 캐시샵 (서프라이즈 캐시샵)",
+  "date": "2016-05-19",
+  "description": "중국 모바일 게임의 한정 시간 깜짝 상점(Flash Cash Shop) 패턴 분석. 짧은 오픈 시간(2~4시간)과 고가치 한정 상품으로 FOMO를 극대화하는 수익화 전략이다.",
+  "patterns": {
+    "itemCategories": [
+      {
+        "id": "cat-currency",
+        "nameKo": "재화 팩",
+        "nameEn": "Currency Pack",
+        "description": "원보(유안바오) 직접 구매 패키지. 깜짝 상점에서는 통상 가격 대비 50~80% 추가 보너스를 제공한다.",
+        "items": [
+          {
+            "nameKo": "소형 원보 팩",
+            "priceRMB": 6,
+            "baseAmount": 60,
+            "bonusAmount": 30,
+            "bonusRate": 0.5,
+            "limitPerUser": 3
+          },
+          {
+            "nameKo": "중형 원보 팩",
+            "priceRMB": 30,
+            "baseAmount": 300,
+            "bonusAmount": 180,
+            "bonusRate": 0.6,
+            "limitPerUser": 2
+          },
+          {
+            "nameKo": "대형 원보 팩",
+            "priceRMB": 98,
+            "baseAmount": 980,
+            "bonusAmount": 680,
+            "bonusRate": 0.69,
+            "limitPerUser": 1
+          },
+          {
+            "nameKo": "특대형 원보 팩",
+            "priceRMB": 328,
+            "baseAmount": 3280,
+            "bonusAmount": 2624,
+            "bonusRate": 0.8,
+            "limitPerUser": 1
+          }
+        ]
+      },
+      {
+        "id": "cat-equipment",
+        "nameKo": "장비 패키지",
+        "nameEn": "Equipment Package",
+        "description": "강화 재료와 고급 장비를 묶은 패키지. 강화 시스템 의존도가 높은 중국 시장 특성을 반영한다.",
+        "items": [
+          {
+            "nameKo": "강화석 번들 (초급)",
+            "priceRMB": 12,
+            "contents": ["강화석 x100", "골드 x50000"],
+            "valueMultiplier": 3.5,
+            "limitPerUser": 5
+          },
+          {
+            "nameKo": "강화석 번들 (중급)",
+            "priceRMB": 45,
+            "contents": ["고급 강화석 x50", "강화 보호권 x5", "골드 x200000"],
+            "valueMultiplier": 4.0,
+            "limitPerUser": 3
+          },
+          {
+            "nameKo": "전설 장비 상자",
+            "priceRMB": 128,
+            "contents": ["전설 장비 선택권 x1", "강화석 x200", "강화 보호권 x10"],
+            "valueMultiplier": 5.0,
+            "limitPerUser": 1
+          }
+        ]
+      },
+      {
+        "id": "cat-gacha",
+        "nameKo": "뽑기 패키지",
+        "nameEn": "Gacha Package",
+        "description": "가챠 티켓을 할인된 가격에 대량 구매할 수 있는 패키지. 한정 캐릭터 배너와 동시에 판매하여 시너지를 극대화한다.",
+        "items": [
+          {
+            "nameKo": "뽑기 티켓 10장 팩",
+            "priceRMB": 25,
+            "contents": ["고급 소환 티켓 x10", "원보 x50"],
+            "normalPriceEquivalent": 50,
+            "discountRate": 0.5,
+            "limitPerUser": 2
+          },
+          {
+            "nameKo": "뽑기 티켓 30장 팩",
+            "priceRMB": 68,
+            "contents": ["고급 소환 티켓 x30", "원보 x200", "소환 보너스 포인트 x50"],
+            "normalPriceEquivalent": 160,
+            "discountRate": 0.575,
+            "limitPerUser": 1
+          }
+        ]
+      },
+      {
+        "id": "cat-cosmetic",
+        "nameKo": "외형 아이템",
+        "nameEn": "Cosmetic Items",
+        "description": "깜짝 상점 전용 한정 코스메틱. 다시 구매할 수 없다는 희소성을 강조하여 수집 욕구를 자극한다.",
+        "items": [
+          {
+            "nameKo": "한정 아바타 프레임",
+            "priceRMB": 18,
+            "contents": ["한정 프레임 x1"],
+            "isExclusive": true,
+            "limitPerUser": 1
+          },
+          {
+            "nameKo": "한정 칭호 팩",
+            "priceRMB": 30,
+            "contents": ["한정 칭호 x1", "한정 채팅 이모티콘 x5"],
+            "isExclusive": true,
+            "limitPerUser": 1
+          },
+          {
+            "nameKo": "전설 스킨 번들",
+            "priceRMB": 198,
+            "contents": ["한정 전설 스킨 x1", "스킨 전용 이펙트 x1", "한정 프레임 x1"],
+            "isExclusive": true,
+            "limitPerUser": 1
+          }
+        ]
+      },
+      {
+        "id": "cat-vip",
+        "nameKo": "VIP 관련",
+        "nameEn": "VIP Items",
+        "description": "VIP 경험치(포인트)를 추가로 획득할 수 있는 패키지. VIP 등급 상승을 가속하여 고과금 유도에 활용된다.",
+        "items": [
+          {
+            "nameKo": "VIP 경험치 팩",
+            "priceRMB": 68,
+            "contents": ["VIP 경험치 x5000", "원보 x200"],
+            "vipPointsEquivalent": 68,
+            "limitPerUser": 2
+          },
+          {
+            "nameKo": "VIP 전용 럭키백",
+            "priceRMB": 328,
+            "contents": ["VIP 경험치 x20000", "랜덤 전설 아이템 x1", "원보 x1000", "골드 x1000000"],
+            "vipPointsEquivalent": 328,
+            "limitPerUser": 1
+          }
+        ]
+      },
+      {
+        "id": "cat-resource",
+        "nameKo": "자원 패키지",
+        "nameEn": "Resource Package",
+        "description": "에너지, 골드, 경험치 등 소모성 자원 대량 패키지. 소과금 유저의 진입점 역할을 한다.",
+        "items": [
+          {
+            "nameKo": "에너지 대량 팩",
+            "priceRMB": 6,
+            "contents": ["에너지 x200", "골드 x30000"],
+            "valueMultiplier": 4.0,
+            "limitPerUser": 5
+          },
+          {
+            "nameKo": "경험치 부스트 팩",
+            "priceRMB": 18,
+            "contents": ["경험치 2배 부스트 (3일) x1", "에너지 x300", "골드 x100000"],
+            "valueMultiplier": 3.5,
+            "limitPerUser": 2
+          }
+        ]
+      }
+    ],
+    "priceTiers": [
+      {
+        "tierRMB": 1,
+        "tierUSD": 0.15,
+        "targetSegment": "체험형 (미과금 전환)",
+        "typicalItems": "소량 에너지, 소량 골드"
+      },
+      {
+        "tierRMB": 6,
+        "tierUSD": 0.99,
+        "targetSegment": "소과금 (Minnow)",
+        "typicalItems": "소형 재화 팩, 에너지 팩, 소모품"
+      },
+      {
+        "tierRMB": 12,
+        "tierUSD": 1.99,
+        "targetSegment": "소과금 (Minnow)",
+        "typicalItems": "강화석 번들, 자원 패키지"
+      },
+      {
+        "tierRMB": 18,
+        "tierUSD": 2.99,
+        "targetSegment": "소~중과금",
+        "typicalItems": "코스메틱, 경험치 부스트, 소형 번들"
+      },
+      {
+        "tierRMB": 25,
+        "tierUSD": 3.99,
+        "targetSegment": "중과금 (Dolphin)",
+        "typicalItems": "가챠 티켓 팩, 중형 번들"
+      },
+      {
+        "tierRMB": 30,
+        "tierUSD": 4.99,
+        "targetSegment": "중과금 (Dolphin)",
+        "typicalItems": "중형 재화 팩, 칭호 팩"
+      },
+      {
+        "tierRMB": 45,
+        "tierUSD": 6.99,
+        "targetSegment": "중과금 (Dolphin)",
+        "typicalItems": "강화석 중급 번들, 프리미엄 소모품"
+      },
+      {
+        "tierRMB": 68,
+        "tierUSD": 9.99,
+        "targetSegment": "중~고과금",
+        "typicalItems": "가챠 대량 팩, VIP 경험치 팩"
+      },
+      {
+        "tierRMB": 98,
+        "tierUSD": 14.99,
+        "targetSegment": "고과금 (Whale)",
+        "typicalItems": "대형 재화 팩, 장비 상자"
+      },
+      {
+        "tierRMB": 128,
+        "tierUSD": 19.99,
+        "targetSegment": "고과금 (Whale)",
+        "typicalItems": "전설 장비 상자, 프리미엄 번들"
+      },
+      {
+        "tierRMB": 198,
+        "tierUSD": 29.99,
+        "targetSegment": "고과금 (Whale)",
+        "typicalItems": "한정 전설 스킨 번들"
+      },
+      {
+        "tierRMB": 328,
+        "tierUSD": 49.99,
+        "targetSegment": "초고과금 (Super Whale)",
+        "typicalItems": "특대형 재화 팩, VIP 럭키백, 최고급 번들"
+      },
+      {
+        "tierRMB": 648,
+        "tierUSD": 99.99,
+        "targetSegment": "초고과금 (Super Whale)",
+        "typicalItems": "최대 재화 팩, 얼티밋 번들"
+      }
+    ],
+    "bundleStructures": [
+      {
+        "type": "가치 극대화 번들 (Value Bundle)",
+        "description": "개별 구매 대비 3~5배 가치를 제공하는 번들. 깜짝 상점의 핵심 상품 유형이다.",
+        "structure": {
+          "mainItem": "핵심 아이템 1종 (유저가 가장 필요로 하는 것)",
+          "subItems": "보조 아이템 2~3종 (다양한 카테고리)",
+          "bonusCurrency": "추가 원보/골드 (가치 인식 증대용)"
+        },
+        "valueMultiplierRange": { "min": 3.0, "max": 5.0 },
+        "priceRangeRMB": { "min": 6, "max": 128 }
+      },
+      {
+        "type": "럭키백 (Lucky Bag / 복주머니)",
+        "description": "랜덤 요소가 포함된 패키지. 최소 보장 가치가 있으면서 대박 기대감을 제공한다.",
+        "structure": {
+          "guaranteedItems": "확정 아이템 (최소 가치 보장)",
+          "randomItems": "랜덤 아이템 1~3종 (SSR 확률 포함)",
+          "bonusCurrency": "추가 원보"
+        },
+        "valueMultiplierRange": { "min": 2.0, "max": 10.0 },
+        "priceRangeRMB": { "min": 30, "max": 648 }
+      },
+      {
+        "type": "단계별 구매 번들 (Tiered Bundle)",
+        "description": "같은 상품을 1회, 2회, 3회 구매할수록 보너스가 증가하는 구조. 추가 구매를 심리적으로 유도한다.",
+        "structure": {
+          "tier1": "기본 보너스 (50%)",
+          "tier2": "강화 보너스 (80%, 2회차 구매 시)",
+          "tier3": "최대 보너스 (100%, 3회차 구매 시)"
+        },
+        "valueMultiplierRange": { "min": 1.5, "max": 4.0 },
+        "priceRangeRMB": { "min": 6, "max": 98 }
+      },
+      {
+        "type": "조합 세트 (Combo Set)",
+        "description": "여러 카테고리의 아이템을 하나로 묶은 종합 패키지. 다양한 니즈를 한 번에 충족시켜 구매 만족도를 높인다.",
+        "structure": {
+          "currency": "원보/다이아몬드",
+          "materials": "강화석/진화석",
+          "consumables": "에너지/부스트",
+          "cosmetic": "한정 외형 (선택적)"
+        },
+        "valueMultiplierRange": { "min": 3.0, "max": 6.0 },
+        "priceRangeRMB": { "min": 30, "max": 328 }
+      }
+    ],
+    "discountPatterns": [
+      {
+        "type": "한정 시간 할인 (Time-Limited Discount)",
+        "discountRange": "30~50%",
+        "duration": "2~4시간",
+        "description": "깜짝 상점의 기본 할인 패턴. 짧은 시간과 높은 할인율로 즉각적인 구매 결정을 유도한다.",
+        "triggerCondition": "서버 기준 고정 시간 (오후 8시~자정 등 피크 타임)"
+      },
+      {
+        "type": "첫 구매 추가 보너스 (First Purchase Bonus)",
+        "discountRange": "100% 추가 (2배)",
+        "duration": "상시 (계정당 1회)",
+        "description": "깜짝 상점의 각 상품을 처음 구매할 때 재화를 2배로 지급한다.",
+        "triggerCondition": "해당 상품 첫 구매 시"
+      },
+      {
+        "type": "구매 횟수 연동 보너스 (Purchase Count Bonus)",
+        "discountRange": "10~30% 누적",
+        "duration": "이벤트 기간",
+        "description": "깜짝 상점에서 구매할 때마다 다음 구매의 보너스가 증가한다. 연속 구매를 유도한다.",
+        "triggerCondition": "동일 이벤트 기간 내 누적 구매"
+      },
+      {
+        "type": "VIP 전용 추가 할인 (VIP Exclusive Discount)",
+        "discountRange": "5~20% (VIP 등급별)",
+        "duration": "상시",
+        "description": "VIP 등급에 따라 깜짝 상점 상품에 추가 할인이 적용된다. VIP 유지 동기를 강화한다.",
+        "triggerCondition": "VIP 5 이상"
+      },
+      {
+        "type": "컴백 유저 특별 할인 (Comeback Special)",
+        "discountRange": "50~70%",
+        "duration": "복귀 후 48시간",
+        "description": "7일 이상 미접속 후 복귀한 유저에게 제공되는 특별 할인. 이탈 유저 재과금 전환에 효과적이다.",
+        "triggerCondition": "7일 이상 미접속 후 복귀"
+      }
+    ],
+    "currencyDistribution": {
+      "primaryCurrency": {
+        "nameKo": "원보 (元宝)",
+        "nameEn": "Yuanbao",
+        "exchangeRate": "1 RMB = 10 원보",
+        "description": "핵심 유료 재화. 가챠, 에너지 충전, 프리미엄 상점 등 모든 핵심 소비처에 사용된다."
+      },
+      "secondaryCurrency": {
+        "nameKo": "골드 (金币)",
+        "nameEn": "Gold",
+        "exchangeRate": "게임 플레이로 주로 획득",
+        "description": "기본 무료 재화. 장비 강화, 레벨업, 일반 상점 구매에 사용된다."
+      },
+      "eventCurrency": {
+        "nameKo": "이벤트 토큰",
+        "nameEn": "Event Token",
+        "exchangeRate": "이벤트 활동으로 획득",
+        "description": "특정 이벤트 기간에만 사용 가능한 한정 재화. 이벤트 전용 상점에서 교환한다."
+      },
+      "vipPoints": {
+        "nameKo": "VIP 포인트",
+        "nameEn": "VIP Points",
+        "exchangeRate": "1 RMB 결제 = 1 VIP 포인트",
+        "description": "결제 금액에 비례하여 적립되는 VIP 경험치. 누적 포인트에 따라 VIP 등급이 상승한다."
+      },
+      "distributionInFlashShop": {
+        "currencyPackShare": 0.35,
+        "bundleShare": 0.30,
+        "gachaShare": 0.20,
+        "cosmeticShare": 0.10,
+        "otherShare": 0.05,
+        "note": "깜짝 상점 매출의 약 35%가 재화 팩 직접 구매, 30%가 번들, 20%가 가챠 관련이다."
+      }
+    },
+    "promotionTypes": [
+      {
+        "type": "정시 깜짝 오픈 (Scheduled Flash Open)",
+        "durationHours": 2,
+        "frequency": "주 2~3회",
+        "description": "서버 시간 기준 특정 시간에 자동으로 오픈되는 깜짝 상점. 유저의 접속 습관을 형성한다.",
+        "bestPractices": [
+          "피크 타임(저녁 8시~자정)에 오픈하여 노출 극대화",
+          "오픈 30분 전 푸시 알림 발송",
+          "상점 내 카운트다운 타이머 필수 표시",
+          "서버 채널에 '깜짝 상점 오픈' 공지 배너 표시"
+        ]
+      },
+      {
+        "type": "이벤트 연동 깜짝 상점 (Event-Linked Flash Shop)",
+        "durationHours": 4,
+        "frequency": "이벤트 기간 중 매일",
+        "description": "신규 캐릭터 출시, 시즌 오픈 등 게임 이벤트와 연동하여 관련 상품을 판매하는 깜짝 상점.",
+        "bestPractices": [
+          "이벤트 컨텐츠와 직접 연관된 상품 배치",
+          "이벤트 전용 한정 코스메틱 포함",
+          "이벤트 보스 클리어 후 깜짝 상점 자동 오픈",
+          "이벤트 랭킹 보상과 시너지 설계"
+        ]
+      },
+      {
+        "type": "개인화 깜짝 오퍼 (Personalized Flash Offer)",
+        "durationHours": 1,
+        "frequency": "유저 행동 트리거",
+        "description": "유저의 특정 행동(강화 실패, 가챠 미획득, 보스 실패 등)을 트리거로 개인에게만 노출되는 한정 오퍼.",
+        "bestPractices": [
+          "강화 실패 직후 강화 보호권 할인 오퍼",
+          "가챠에서 SSR 미획득 시 추가 티켓 할인 오퍼",
+          "에너지 부족 시 에너지 팩 특가 오퍼",
+          "구매 직후 다음 단계 번들 추천 (업셀링)"
+        ]
+      },
+      {
+        "type": "VIP 전용 깜짝 상점 (VIP Exclusive Flash Shop)",
+        "durationHours": 3,
+        "frequency": "주 1회",
+        "description": "VIP 5 이상 유저에게만 노출되는 프리미엄 깜짝 상점. 일반 상점보다 높은 할인율과 전용 상품을 제공한다.",
+        "bestPractices": [
+          "VIP 등급별 차등 할인율 적용 (VIP 10 이상 추가 10% 등)",
+          "VIP 전용 한정 아이템 포함",
+          "일반 유저에게 VIP 상점 '미리보기'를 노출하여 VIP 전환 유도",
+          "VIP 등급 업 직후 축하 보너스 오퍼 자동 노출"
+        ]
+      },
+      {
+        "type": "주말 특별 깜짝 상점 (Weekend Special Flash Shop)",
+        "durationHours": 6,
+        "frequency": "매주 토/일",
+        "description": "주말 접속자 증가를 활용한 확장형 깜짝 상점. 평일보다 긴 오픈 시간과 더 많은 상품을 제공한다.",
+        "bestPractices": [
+          "주말 전용 대형 번들 추가",
+          "금요일 오후 사전 공지로 기대감 조성",
+          "토/일 각각 다른 상품 라인업 구성",
+          "일요일 마감 전 '라스트 찬스' 추가 할인"
+        ]
+      },
+      {
+        "type": "마일스톤 깜짝 보상 (Milestone Flash Reward)",
+        "durationHours": 24,
+        "frequency": "마일스톤 달성 시",
+        "description": "유저의 특정 마일스톤(레벨 달성, 첫 구매, VIP 등급 업 등) 달성 시 자동으로 노출되는 축하 오퍼.",
+        "bestPractices": [
+          "레벨 10/20/30/50 달성 시 성장 번들 오퍼",
+          "첫 구매 완료 직후 다음 단계 번들 오퍼 (48시간 한정)",
+          "VIP 등급 달성 시 전용 축하 패키지",
+          "100일/200일/365일 플레이 기념 특별 패키지"
+        ]
+      }
+    ]
+  },
+  "analysisNotes": {
+    "keyInsights": [
+      "깜짝 캐시샵의 핵심은 '시간 제한'과 '가치 극대화'의 조합이다. 짧은 시간(2~4시간) 동안 평소보다 50~100% 높은 가치를 제공하여 즉각적인 구매 결정을 유도한다.",
+      "중국 시장에서 가격 티어는 6/18/30/68/98/128/328/648 RMB가 표준이며, 이는 Apple App Store의 중국 가격 티어와 일치한다.",
+      "VIP 시스템과 깜짝 상점의 시너지가 매출의 핵심이다. VIP 등급이 높을수록 깜짝 상점에서의 추가 할인이 적용되어 VIP 유지 동기를 강화한다.",
+      "깜짝 상점 오픈 시 서버 전체 공지와 푸시 알림을 병행하면 접속률이 30~40% 증가하며, 상점 방문률은 60% 이상이다.",
+      "개인화 깜짝 오퍼(강화 실패 후, 가챠 미획득 후)의 전환율은 일반 깜짝 상점 대비 2~3배 높다.",
+      "첫 구매 2배 보너스는 깜짝 상점과 중복 적용하면 NPU 전환율이 통상 대비 4배 이상 상승한다."
+    ],
+    "revenueContribution": {
+      "flashShopShareOfTotal": "15~25%",
+      "description": "깜짝 캐시샵은 전체 IAP 매출의 15~25%를 차지하며, 특히 신규 컨텐츠 출시 주에는 30%까지 상승한다."
+    },
+    "userBehaviorPatterns": {
+      "averageTimeToFirstPurchase": "오픈 후 5~15분",
+      "repeatPurchaseRate": "첫 구매 유저의 40~50%가 같은 세션에서 추가 구매",
+      "peakPurchaseTime": "오픈 직후 30분과 마감 직전 30분에 구매가 집중",
+      "segmentDistribution": {
+        "minnow": "전체 구매 건수의 45%, 매출의 15%",
+        "dolphin": "전체 구매 건수의 35%, 매출의 35%",
+        "whale": "전체 구매 건수의 15%, 매출의 35%",
+        "superWhale": "전체 구매 건수의 5%, 매출의 15%"
+      }
+    }
+  }
+}
