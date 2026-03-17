@@ -4,7 +4,7 @@ import { Sparkles, ChevronDown, ChevronUp, RefreshCw, AlertCircle, CheckCircle2,
 import type { ProductMixRecommendation } from '../../services/gemini';
 import type { GameStructure } from '../../models/game-structure';
 import type { Product, ProductCategory } from '../../models';
-import { recommendProductMix } from '../../services/gemini';
+import { recommendProductMix, recommendProducts } from '../../services/gemini';
 import { useMindmapStore } from '../../stores/mindmap-store';
 import { useProductStore } from '../../stores/product-store';
 import { useProjectStore } from '../../stores/project-store';
@@ -67,6 +67,19 @@ function mapTypeToCategory(type: string): ProductCategory {
   return TYPE_TO_CATEGORY[type] ?? 'other';
 }
 
+function mapSegment(segment: string | undefined): Product['targetSegments'][number] {
+  const map: Record<string, Product['targetSegments'][number]> = {
+    npu: 'non_payer',
+    non_payer: 'non_payer',
+    minnow: 'minnow',
+    dolphin: 'dolphin',
+    whale: 'whale',
+    super_whale: 'super_whale',
+    offerwall: 'offerwall',
+  };
+  return map[segment ?? ''] ?? 'minnow';
+}
+
 function getStarterTierMidpointUsd(genre: string | undefined): number {
   if (!genre) return 2.99;
 
@@ -104,6 +117,13 @@ const MANDATORY_PRODUCT_DEFS: readonly MandatoryProductDef[] = [
     description: '오퍼월을 통한 무료 재화 획득 시스템',
     matchName: ['오퍼월', 'offerwall', '오퍼 월'],
     matchType: ['offerwalls', 'rewarded_ads'],
+  },
+  {
+    name: '시즌 패스',
+    category: 'battle_pass',
+    description: '시즌별 보상을 제공하는 패스권 상품',
+    matchName: ['패스', '시즌패스', '배틀패스', 'pass', 'battle_pass'],
+    matchType: ['battle_pass', 'pass'],
   },
 ] as const;
 
@@ -196,6 +216,7 @@ export default function AiProductMixPanel() {
   const [showRequirements, setShowRequirements] = useState(false);
   const [userRequirements, setUserRequirements] = useState('');
   const [showApplyMode, setShowApplyMode] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
 
   const analysisResult = useMindmapStore((s) => s.analysisResult);
   const addProduct = useProductStore((s) => s.addProduct);
@@ -282,58 +303,117 @@ export default function AiProductMixPanel() {
     }));
   }, [currentRecommendations, analysisResult, activeProjectId]);
 
-  const handleApplyToProducts = useCallback(() => {
+  /** AI로 상세 상품 목록 생성 (contents 포함) */
+  const fetchAiProducts = useCallback(async (): Promise<readonly Product[]> => {
+    const structure = analysisResult ?? buildFallbackStructure();
+    if (!structure) return buildNewProducts();
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const aiProducts: any[] = await recommendProducts(structure);
+      const projectId = activeProjectId ?? '';
+      const now = new Date().toISOString();
+
+      // AI 반환 상품을 Product 형식으로 정규화
+      return aiProducts.map((p: Record<string, unknown>, index: number) => ({
+        id: generateProductId(),
+        projectId,
+        name: (p.name || p.nameKo || `상품 ${index + 1}`) as string,
+        description: (p.description || '') as string,
+        category: ((p.category || 'other') as string) as ProductCategory,
+        priceKRW: (p.priceKRW || p.priceKrw || Math.round(((p.priceUSD || p.priceUsd || 2.99) as number) * KRW_USD_RATE)) as number,
+        priceUSD: (p.priceUSD || p.priceUsd || 2.99) as number,
+        targetSegments: [mapSegment((p.userSegment || (Array.isArray(p.targetSegments) ? p.targetSegments[0] : undefined)) as string)] as const,
+        targetRetentionStage: ((p.targetRetentionStage || p.retentionStage || 'd7') as string) as Product['targetRetentionStage'],
+        contents: (Array.isArray(p.contents) ? p.contents : []).map((c: Record<string, unknown>) => ({
+          itemName: (c.itemName || '') as string,
+          quantity: (c.quantity || 1) as number,
+          description: (c.description || '') as string,
+        })),
+        purchaseLimit: (p.purchaseLimit || { type: 'unlimited' as const, maxCount: 0 }) as Product['purchaseLimit'],
+        funnelStageId: null,
+        sortOrder: index,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }));
+    } catch {
+      // AI 실패 시 기존 방식 fallback
+      return buildNewProducts();
+    }
+  }, [analysisResult, activeProjectId, buildNewProducts]);
+
+  const handleApplyToProducts = useCallback(async () => {
     if (!currentRecommendations || currentRecommendations.length === 0) return;
 
-    // 기존 상품이 있으면 교체/추가 선택 모달 표시
     if (existingProducts.length > 0) {
       setShowApplyMode(true);
       return;
     }
 
-    // 기존 상품이 없으면 바로 추가 (필수 상품 포함)
-    const genre = analysisResult?.genre;
-    const midUsd = getStarterTierMidpointUsd(genre);
-    const midKrw = Math.round(midUsd * KRW_USD_RATE);
-    const productsWithMandatory = ensureMandatoryProducts(buildNewProducts(), activeProjectId ?? '', midUsd, midKrw);
-    setProducts(productsWithMandatory);
-    setApplySuccess(`상품 ${productsWithMandatory.length}개가 추가되었습니다 (NPU유도·오퍼월 필수 포함)`);
-    setTimeout(() => { setApplySuccess(null); }, 4000);
-  }, [currentRecommendations, existingProducts, buildNewProducts, addProduct, analysisResult, activeProjectId, setProducts]);
-
-  const handleApplyReplace = useCallback(() => {
-    const genre = analysisResult?.genre;
-    const midUsd = getStarterTierMidpointUsd(genre);
-    const midKrw = Math.round(midUsd * KRW_USD_RATE);
-    const productsWithMandatory = ensureMandatoryProducts(buildNewProducts(), activeProjectId ?? '', midUsd, midKrw);
-    setProducts(productsWithMandatory);
-    setShowApplyMode(false);
-    setApplySuccess(`기존 상품을 교체하고 ${productsWithMandatory.length}개가 등록되었습니다 (NPU유도·오퍼월 필수 포함)`);
-    setTimeout(() => { setApplySuccess(null); }, 4000);
-  }, [buildNewProducts, setProducts, analysisResult, activeProjectId]);
-
-  const handleApplyAppend = useCallback(() => {
-    const genre = analysisResult?.genre;
-    const midUsd = getStarterTierMidpointUsd(genre);
-    const midKrw = Math.round(midUsd * KRW_USD_RATE);
-    const base = buildNewProducts();
-    for (const product of base) {
-      addProduct(product);
+    setIsApplying(true);
+    try {
+      const genre = analysisResult?.genre;
+      const midUsd = getStarterTierMidpointUsd(genre);
+      const midKrw = Math.round(midUsd * KRW_USD_RATE);
+      const aiProducts = await fetchAiProducts();
+      const productsWithMandatory = ensureMandatoryProducts(aiProducts, activeProjectId ?? '', midUsd, midKrw);
+      setProducts(productsWithMandatory);
+      setApplySuccess(`AI가 구성품 포함 상품 ${productsWithMandatory.length}개를 생성했습니다`);
+      setTimeout(() => { setApplySuccess(null); }, 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'AI 상품 생성 실패');
+    } finally {
+      setIsApplying(false);
     }
-    // 기존 + 새 상품 합친 후 필수 상품 확인
-    const allProducts = [...existingProducts, ...base];
-    const withMandatory = ensureMandatoryProducts(allProducts, activeProjectId ?? '', midUsd, midKrw);
-    // 필수 상품이 추가된 경우만 store에 반영
-    if (withMandatory.length > allProducts.length) {
-      const addedMandatory = withMandatory.slice(allProducts.length);
-      for (const product of addedMandatory) {
+  }, [currentRecommendations, existingProducts, fetchAiProducts, analysisResult, activeProjectId, setProducts]);
+
+  const handleApplyReplace = useCallback(async () => {
+    setIsApplying(true);
+    try {
+      const genre = analysisResult?.genre;
+      const midUsd = getStarterTierMidpointUsd(genre);
+      const midKrw = Math.round(midUsd * KRW_USD_RATE);
+      const aiProducts = await fetchAiProducts();
+      const productsWithMandatory = ensureMandatoryProducts(aiProducts, activeProjectId ?? '', midUsd, midKrw);
+      setProducts(productsWithMandatory);
+      setShowApplyMode(false);
+      setApplySuccess(`기존 상품을 교체하고 ${productsWithMandatory.length}개가 등록되었습니다`);
+      setTimeout(() => { setApplySuccess(null); }, 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'AI 상품 생성 실패');
+    } finally {
+      setIsApplying(false);
+    }
+  }, [fetchAiProducts, setProducts, analysisResult, activeProjectId]);
+
+  const handleApplyAppend = useCallback(async () => {
+    setIsApplying(true);
+    try {
+      const genre = analysisResult?.genre;
+      const midUsd = getStarterTierMidpointUsd(genre);
+      const midKrw = Math.round(midUsd * KRW_USD_RATE);
+      const aiProducts = await fetchAiProducts();
+      for (const product of aiProducts) {
         addProduct(product);
       }
+      const allProducts = [...existingProducts, ...aiProducts];
+      const withMandatory = ensureMandatoryProducts(allProducts, activeProjectId ?? '', midUsd, midKrw);
+      if (withMandatory.length > allProducts.length) {
+        const addedMandatory = withMandatory.slice(allProducts.length);
+        for (const product of addedMandatory) {
+          addProduct(product);
+        }
+      }
+      setShowApplyMode(false);
+      setApplySuccess(`기존 상품에 ${aiProducts.length}개가 추가되었습니다`);
+      setTimeout(() => { setApplySuccess(null); }, 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'AI 상품 생성 실패');
+    } finally {
+      setIsApplying(false);
     }
-    setShowApplyMode(false);
-    setApplySuccess(`기존 상품에 ${base.length}개가 추가되었습니다 (NPU유도·오퍼월 필수 포함)`);
-    setTimeout(() => { setApplySuccess(null); }, 4000);
-  }, [buildNewProducts, addProduct, existingProducts, analysisResult, activeProjectId]);
+  }, [fetchAiProducts, addProduct, existingProducts, analysisResult, activeProjectId]);
 
   const pieData = useMemo(
     () =>
@@ -366,9 +446,10 @@ export default function AiProductMixPanel() {
               variant="secondary"
               size="sm"
               onClick={handleApplyToProducts}
+              loading={isApplying}
               icon={<CheckCircle2 className="w-4 h-4" />}
             >
-              상품에 반영
+              {isApplying ? 'AI 상품 생성 중...' : '상품에 반영'}
             </Button>
           )}
           <Button

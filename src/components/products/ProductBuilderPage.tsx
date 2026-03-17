@@ -1,11 +1,13 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, Download, LayoutGrid, List, Package } from 'lucide-react';
-import type { Product, UserSegment } from '../../models';
-import { USER_SEGMENT_LABELS } from '../../utils/constants';
+import { Plus, Download, LayoutGrid, List, Package, Lightbulb, CheckCircle2 } from 'lucide-react';
+import type { Product, UserSegment, ProductCategory } from '../../models';
+import { USER_SEGMENT_LABELS, PRODUCT_CATEGORY_LABELS } from '../../utils/constants';
 import { useProductStore } from '../../stores/product-store';
+import { useGenreStore } from '../../stores/genre-store';
 import { DEFAULT_PRODUCTS } from '../../data/default-products';
 import PageContainer from '../layout/PageContainer';
 import Button from '../ui/Button';
+import Badge from '../ui/Badge';
 import EmptyState from '../ui/EmptyState';
 import AiProductMixPanel from './AiProductMixPanel';
 import PriceTierGuidance from './PriceTierGuidance';
@@ -18,11 +20,97 @@ type ViewMode = 'grid' | 'list';
 
 const ALL_SEGMENTS: readonly UserSegment[] = ['offerwall', 'non_payer', 'minnow', 'dolphin', 'whale', 'super_whale'];
 
+// 장르별 필수 카테고리
+const ESSENTIAL_CATEGORIES: Readonly<Record<string, readonly { category: ProductCategory; reason: string }[]>> = {
+  rpg: [
+    { category: 'battle_pass', reason: '리텐션 향상의 핵심 상품' },
+    { category: 'starter_pack', reason: 'NPU 전환에 효과적' },
+    { category: 'gacha', reason: 'RPG 핵심 수익 모델' },
+    { category: 'vip', reason: '고과금 유저 유지' },
+    { category: 'remove_ads', reason: 'NPU 첫 결제 유도' },
+  ],
+  casual: [
+    { category: 'remove_ads', reason: '캐주얼 필수 상품' },
+    { category: 'energy', reason: '에너지 기반 게임에 필수' },
+    { category: 'starter_pack', reason: 'NPU 전환율 향상' },
+    { category: 'cosmetic', reason: '캐주얼 유저 선호' },
+  ],
+  puzzle: [
+    { category: 'remove_ads', reason: '퍼즐 게임 필수' },
+    { category: 'energy', reason: '하트/에너지 시스템' },
+    { category: 'boost', reason: '어려운 스테이지 돌파' },
+    { category: 'starter_pack', reason: 'NPU 전환' },
+  ],
+  _default: [
+    { category: 'battle_pass', reason: '리텐션 향상에 효과적' },
+    { category: 'starter_pack', reason: 'NPU 전환에 필수적' },
+    { category: 'remove_ads', reason: '광고 제거 수요' },
+  ],
+};
+
+function generateTemplateId(): string {
+  return `prod_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+// ─── 상품 보강 가이드 ───
+function ProductReinforcementGuide({ products, genre }: { readonly products: readonly Product[]; readonly genre: string | null }) {
+  const existingCategories = useMemo(
+    () => new Set(products.map((p) => p.category)),
+    [products],
+  );
+
+  const essentials = genre && genre in ESSENTIAL_CATEGORIES
+    ? ESSENTIAL_CATEGORIES[genre]
+    : ESSENTIAL_CATEGORIES._default;
+
+  const missing = useMemo(
+    () => essentials.filter((e) => !existingCategories.has(e.category)),
+    [essentials, existingCategories],
+  );
+
+  if (products.length === 0 || missing.length === 0) return null;
+
+  return (
+    <div className="mb-4 p-4 rounded-xl border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/50">
+      <div className="flex items-center gap-2 mb-3">
+        <Lightbulb className="w-4 h-4 text-blue-500" />
+        <span className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+          상품 보강 가이드
+        </span>
+        <Badge variant="primary" size="sm">{missing.length}개 추천</Badge>
+      </div>
+      <p className="text-xs text-blue-600 dark:text-blue-400 mb-3">
+        현재 구성에서 아래 상품 유형을 추가하면 수익 구조가 개선됩니다:
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {missing.map((item) => (
+          <div
+            key={item.category}
+            className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg border border-blue-100 dark:border-blue-900"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+            <div>
+              <span className="text-xs font-medium text-blue-800 dark:text-blue-200">
+                {PRODUCT_CATEGORY_LABELS.get(item.category) ?? item.category}
+              </span>
+              <span className="text-xs text-blue-500 dark:text-blue-400 ml-1.5">
+                — {item.reason}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ProductBuilderPage() {
   const { products, selectedSegment, addProduct, updateProduct, deleteProduct, setSelectedSegment } = useProductStore();
+  const selectedGenre = useGenreStore((s) => s.selectedGenre);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [templateToast, setTemplateToast] = useState<string | null>(null);
 
   const productCountBySegment = useMemo(() => {
     const counts = new Map<UserSegment, number>();
@@ -65,12 +153,30 @@ export default function ProductBuilderPage() {
   }, [editingProduct, updateProduct, addProduct]);
 
   const handleLoadTemplates = useCallback(() => {
-    const existingIds = new Set(products.map((p) => p.id));
+    if (DEFAULT_PRODUCTS.length === 0) {
+      setTemplateToast('템플릿 데이터가 없습니다.');
+      setTimeout(() => setTemplateToast(null), 3000);
+      return;
+    }
+
+    // 새 ID 생성하여 중복 방지
+    let addedCount = 0;
+    const existingNames = new Set(products.map((p) => p.name));
+
     DEFAULT_PRODUCTS.forEach((template) => {
-      if (!existingIds.has(template.id)) {
-        addProduct({ ...template });
+      // 이름 중복 체크 (ID 대신 이름으로)
+      if (!existingNames.has(template.name)) {
+        addProduct({ ...template, id: generateTemplateId() });
+        addedCount++;
       }
     });
+
+    if (addedCount > 0) {
+      setTemplateToast(`템플릿 ${addedCount}개가 추가되었습니다`);
+    } else {
+      setTemplateToast('이미 모든 템플릿이 로드되어 있습니다');
+    }
+    setTimeout(() => setTemplateToast(null), 3000);
   }, [products, addProduct]);
 
   const handleCloseForm = useCallback(() => {
@@ -86,12 +192,23 @@ export default function ProductBuilderPage() {
       {/* Genre Price Strategy */}
       <PriceTierGuidance />
 
+      {/* Product Reinforcement Guide */}
+      <ProductReinforcementGuide products={products} genre={selectedGenre} />
+
       {/* Segment Tabs */}
       <SegmentTabs
         activeSegment={selectedSegment}
         onSegmentChange={setSelectedSegment}
         productCountBySegment={productCountBySegment}
       />
+
+      {/* Template toast */}
+      {templateToast && (
+        <div className="mt-3 mb-3 p-3 bg-green-50 dark:bg-green-950 rounded-lg flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+          <span className="text-sm font-medium text-green-700 dark:text-green-300">{templateToast}</span>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex items-center justify-between mt-4 mb-4">

@@ -71,7 +71,11 @@ export const PRODUCT_RECOMMENDATION_PROMPT = `당신은 게임 유료화 전략 
 5. Super Whale: 최고가 독점 팩 $99.99+
 6. 가치 배수(valueMultiplier)는 실제 가격 대비 체감 가치
 7. 모든 상품명과 설명은 한국어로
-8. 최소 15개 이상의 상품을 추천하세요`;
+8. 최소 15개 이상의 상품을 추천하세요
+9. contents의 itemName은 게임 구조에서 추출한 재화/아이템 이름을 사용하세요
+10. 배틀패스/시즌패스(battle_pass) 상품은 반드시 1개 이상 포함하세요 - 패스 보상은 게임 시스템 기반으로 구성하세요
+11. 광고 제거(remove_ads) 상품을 반드시 포함하세요
+12. 오퍼월/보상형 광고 관련 상품을 포함하세요 (category: "other", 이름에 "오퍼월" 또는 "리워드" 포함)`;
 
 export const SCHEMA_GENERATION_PROMPT = `당신은 게임 백엔드 데이터베이스 설계 전문가입니다. 다음 유료화 상품 목록과 게임 장르를 분석하고, 최적의 데이터베이스 스키마를 생성하세요.
 

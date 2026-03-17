@@ -1,9 +1,11 @@
 import { useState, useCallback, useMemo } from 'react';
-import { RotateCcw, Users, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
+import { RotateCcw, Users, Lightbulb, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useFunnelStore } from '../../stores/funnel-store';
 import { useProductStore } from '../../stores/product-store';
 import { useGenreStore } from '../../stores/genre-store';
+import { useMindmapStore } from '../../stores/mindmap-store';
 import { getGenreBlueprint } from '../../data/genre-blueprints/index';
+import { suggestFunnelStrategies } from '../../services/gemini';
 import { GAME_GENRE_LABELS } from '../../utils/constants';
 import type { GameGenre } from '../../models/project';
 import PageContainer from '../layout/PageContainer';
@@ -196,6 +198,83 @@ export default function FunnelDesignerPage() {
     setSelectedStageId(null);
   }, [resetStages]);
 
+  // ─── AI 퍼널 추천 ───
+  const analysisResult = useMindmapStore((s) => s.analysisResult);
+  const [isAiFunnel, setIsAiFunnel] = useState(false);
+  const [aiFunnelError, setAiFunnelError] = useState<string | null>(null);
+
+  // 상품 카테고리 → 퍼널 단계 매핑
+  const CATEGORY_TO_STAGE: Readonly<Record<string, string>> = {
+    starter_pack: 'first_purchase',
+    piggy_bank: 'first_purchase',
+    battle_pass: 'repeat_purchase',
+    subscription: 'repeat_purchase',
+    pass: 'repeat_purchase',
+    currency_pack: 'repeat_purchase',
+    bundle: 'repeat_purchase',
+    gacha: 'subscription_or_vip',
+    vip: 'subscription_or_vip',
+    cosmetic: 'core_loop_engaged',
+    energy: 'core_loop_engaged',
+    boost: 'core_loop_engaged',
+    remove_ads: 'first_purchase_prompt',
+    other: 'first_purchase_prompt',
+  };
+
+  const handleAiFunnel = useCallback(async () => {
+    const structure = analysisResult;
+    if (!structure) {
+      setAiFunnelError('마인드맵을 먼저 분석해주세요.');
+      setTimeout(() => setAiFunnelError(null), 3000);
+      return;
+    }
+
+    setIsAiFunnel(true);
+    setAiFunnelError(null);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const aiStages: any[] = await suggestFunnelStrategies(structure);
+
+      // AI 반환 단계를 스토어에 적용
+      resetStages();
+
+      const currentStages = useFunnelStore.getState().stages;
+      for (const aiStage of aiStages) {
+        const stageName = aiStage.name as string;
+        const stageLabel = (aiStage.labelKo || aiStage.label || '') as string;
+        const matchedStage = currentStages.find((s) =>
+          s.name === stageName || s.label === stageLabel
+        );
+        if (matchedStage) {
+          updateStage(matchedStage.id, {
+            conversionRate: (aiStage.conversionRate ?? matchedStage.conversionRate) as number,
+            description: ((aiStage.notes || aiStage.targetKpi || matchedStage.description) as string),
+          });
+          if (stageLabel) {
+            updateStageLabel(matchedStage.id, stageLabel);
+          }
+        }
+      }
+
+      // 상품 자동 배치
+      const updatedStages = useFunnelStore.getState().stages;
+      for (const product of products) {
+        const targetStageName = CATEGORY_TO_STAGE[product.category] ?? 'first_purchase_prompt';
+        const stage = updatedStages.find((s) => s.name === targetStageName);
+        if (stage) {
+          assignProduct(stage.id, product.id);
+        }
+      }
+
+      setSelectedStageId(null);
+    } catch (err) {
+      setAiFunnelError(err instanceof Error ? err.message : 'AI 퍼널 추천 실패');
+      setTimeout(() => setAiFunnelError(null), 5000);
+    } finally {
+      setIsAiFunnel(false);
+    }
+  }, [analysisResult, resetStages, updateStage, updateStageLabel, assignProduct, products]);
+
   const assignModalStage = assignModalStageId
     ? stages.find((s) => s.id === assignModalStageId) ?? null
     : null;
@@ -226,6 +305,15 @@ export default function FunnelDesignerPage() {
           </div>
         </div>
         <Button
+          variant="primary"
+          size="sm"
+          onClick={handleAiFunnel}
+          loading={isAiFunnel}
+          icon={<Sparkles className="w-4 h-4" />}
+        >
+          {isAiFunnel ? 'AI 분석 중...' : 'AI 퍼널 추천'}
+        </Button>
+        <Button
           variant="secondary"
           size="sm"
           onClick={handleReset}
@@ -234,6 +322,12 @@ export default function FunnelDesignerPage() {
           초기화
         </Button>
       </div>
+
+      {aiFunnelError && (
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-950 rounded-lg text-sm text-red-700 dark:text-red-300">
+          {aiFunnelError}
+        </div>
+      )}
 
       {/* Main Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
