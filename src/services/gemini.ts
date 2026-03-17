@@ -145,14 +145,17 @@ const retryWithBackoff = async <T>(
 export const analyzeMindmapImage = async (imageBase64: string): Promise<GameStructure> => {
   return retryWithBackoff(async () => {
     const text = await callGemini([
-      { parts: [{ text: MINDMAP_ANALYSIS_PROMPT }] },
       {
-        parts: [{
-          inlineData: {
-            mimeType: 'image/png',
-            data: imageBase64.replace(/^data:image\/\w+;base64,/, ''),
+        role: 'user',
+        parts: [
+          { text: MINDMAP_ANALYSIS_PROMPT },
+          {
+            inlineData: {
+              mimeType: 'image/png',
+              data: imageBase64.replace(/^data:image\/\w+;base64,/, ''),
+            },
           },
-        }],
+        ],
       },
     ]);
     return parseJsonResponse<GameStructure>(text);
@@ -162,7 +165,7 @@ export const analyzeMindmapImage = async (imageBase64: string): Promise<GameStru
 export const analyzeMindmapText = async (textContent: string): Promise<GameStructure> => {
   return retryWithBackoff(async () => {
     const prompt = `${MINDMAP_ANALYSIS_PROMPT}\n\n다음은 게임 구조를 설명하는 텍스트입니다:\n\n${textContent}`;
-    const text = await callGemini([{ parts: [{ text: prompt }] }]);
+    const text = await callGemini([{ role: 'user', parts: [{ text: prompt }] }]);
     return parseJsonResponse<GameStructure>(text);
   });
 };
@@ -170,7 +173,7 @@ export const analyzeMindmapText = async (textContent: string): Promise<GameStruc
 export const recommendProducts = async (structure: GameStructure): Promise<Product[]> => {
   return retryWithBackoff(async () => {
     const prompt = PRODUCT_RECOMMENDATION_PROMPT.replace('{{GAME_STRUCTURE}}', JSON.stringify(structure, null, 2));
-    const text = await callGemini([{ parts: [{ text: prompt }] }]);
+    const text = await callGemini([{ role: 'user', parts: [{ text: prompt }] }]);
     return parseJsonResponse<Product[]>(text);
   });
 };
@@ -183,7 +186,7 @@ export const generateSchemas = async (
     const prompt = SCHEMA_GENERATION_PROMPT
       .replace('{{PRODUCTS}}', JSON.stringify(products, null, 2))
       .replace('{{GENRE}}', genre ?? 'other');
-    const text = await callGemini([{ parts: [{ text: prompt }] }]);
+    const text = await callGemini([{ role: 'user', parts: [{ text: prompt }] }]);
     return parseJsonResponse<DataSchema[]>(text);
   });
 };
@@ -210,7 +213,7 @@ export const recommendProductMix = async (
       prompt += `\n\n[사용자 필수 요구사항]\n다음 요구사항을 반드시 반영하세요:\n${userRequirements.trim()}`;
     }
 
-    const text = await callGemini([{ parts: [{ text: prompt }] }]);
+    const text = await callGemini([{ role: 'user', parts: [{ text: prompt }] }]);
     const parsed = parseJsonResponse<ProductMixResponse>(text);
     return parsed.mix;
   });
@@ -219,7 +222,7 @@ export const recommendProductMix = async (
 export const suggestFunnelStrategies = async (structure: GameStructure): Promise<FunnelStage[]> => {
   return retryWithBackoff(async () => {
     const prompt = FUNNEL_STRATEGY_PROMPT.replace('{{GAME_STRUCTURE}}', JSON.stringify(structure, null, 2));
-    const text = await callGemini([{ parts: [{ text: prompt }] }]);
+    const text = await callGemini([{ role: 'user', parts: [{ text: prompt }] }]);
     return parseJsonResponse<FunnelStage[]>(text);
   });
 };
