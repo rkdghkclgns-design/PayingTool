@@ -80,6 +80,80 @@ function getStarterTierMidpointUsd(genre: string | undefined): number {
 }
 
 // ─────────────────────────────────────────────
+// Mandatory products — NPU유도 + 오퍼월
+// ─────────────────────────────────────────────
+interface MandatoryProductDef {
+  readonly name: string;
+  readonly category: ProductCategory;
+  readonly description: string;
+  readonly matchName: readonly string[];
+  readonly matchType: readonly string[];
+}
+
+const MANDATORY_PRODUCT_DEFS: readonly MandatoryProductDef[] = [
+  {
+    name: 'NPU유도 스타터 팩',
+    category: 'starter_pack',
+    description: '비과금 유저의 첫 결제를 유도하는 저가 패키지',
+    matchName: ['npu', 'NPU', 'NPU유도'],
+    matchType: ['starter_pack'],
+  },
+  {
+    name: '오퍼월 보상',
+    category: 'other',
+    description: '오퍼월을 통한 무료 재화 획득 시스템',
+    matchName: ['오퍼월', 'offerwall', '오퍼 월'],
+    matchType: ['offerwalls', 'rewarded_ads'],
+  },
+] as const;
+
+function hasMandatoryProduct(
+  products: readonly Product[],
+  def: MandatoryProductDef,
+): boolean {
+  return products.some((p) => {
+    const nameLC = p.name.toLowerCase();
+    const descLC = p.description.toLowerCase();
+    return def.matchName.some((m) => nameLC.includes(m.toLowerCase()) || descLC.includes(m.toLowerCase()));
+  });
+}
+
+function ensureMandatoryProducts(
+  products: readonly Product[],
+  projectId: string,
+  midpointUsd: number,
+  midpointKrw: number,
+): readonly Product[] {
+  const now = new Date().toISOString();
+  const missing: Product[] = [];
+
+  for (const def of MANDATORY_PRODUCT_DEFS) {
+    if (!hasMandatoryProduct(products, def)) {
+      missing.push({
+        id: generateProductId(),
+        projectId,
+        name: def.name,
+        description: def.description,
+        category: def.category,
+        priceKRW: def.category === 'starter_pack' ? midpointKrw : 0,
+        priceUSD: def.category === 'starter_pack' ? midpointUsd : 0,
+        targetSegments: ['non_payer', 'minnow'] as const,
+        targetRetentionStage: 'd7' as const,
+        contents: [],
+        purchaseLimit: { type: 'unlimited' as const, maxCount: 0 },
+        funnelStageId: null,
+        sortOrder: products.length + missing.length,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  }
+
+  return missing.length > 0 ? [...products, ...missing] : products;
+}
+
+// ─────────────────────────────────────────────
 // Fallback: build a minimal GameStructure from the first available blueprint
 // ─────────────────────────────────────────────
 const buildFallbackStructure = (): GameStructure | null => {
@@ -216,32 +290,49 @@ export default function AiProductMixPanel() {
       return;
     }
 
-    // 기존 상품이 없으면 바로 추가
-    const newProducts = buildNewProducts();
-    for (const product of newProducts) {
-      addProduct(product);
-    }
-    setApplySuccess(`상품 ${newProducts.length}개가 추가되었습니다`);
+    // 기존 상품이 없으면 바로 추가 (필수 상품 포함)
+    const genre = analysisResult?.genre;
+    const midUsd = getStarterTierMidpointUsd(genre);
+    const midKrw = Math.round(midUsd * KRW_USD_RATE);
+    const productsWithMandatory = ensureMandatoryProducts(buildNewProducts(), activeProjectId ?? '', midUsd, midKrw);
+    setProducts(productsWithMandatory);
+    setApplySuccess(`상품 ${productsWithMandatory.length}개가 추가되었습니다 (NPU유도·오퍼월 필수 포함)`);
     setTimeout(() => { setApplySuccess(null); }, 4000);
-  }, [currentRecommendations, existingProducts, buildNewProducts, addProduct]);
+  }, [currentRecommendations, existingProducts, buildNewProducts, addProduct, analysisResult, activeProjectId, setProducts]);
 
   const handleApplyReplace = useCallback(() => {
-    const newProducts = buildNewProducts();
-    setProducts(newProducts);
+    const genre = analysisResult?.genre;
+    const midUsd = getStarterTierMidpointUsd(genre);
+    const midKrw = Math.round(midUsd * KRW_USD_RATE);
+    const productsWithMandatory = ensureMandatoryProducts(buildNewProducts(), activeProjectId ?? '', midUsd, midKrw);
+    setProducts(productsWithMandatory);
     setShowApplyMode(false);
-    setApplySuccess(`기존 상품을 교체하고 ${newProducts.length}개가 등록되었습니다`);
+    setApplySuccess(`기존 상품을 교체하고 ${productsWithMandatory.length}개가 등록되었습니다 (NPU유도·오퍼월 필수 포함)`);
     setTimeout(() => { setApplySuccess(null); }, 4000);
-  }, [buildNewProducts, setProducts]);
+  }, [buildNewProducts, setProducts, analysisResult, activeProjectId]);
 
   const handleApplyAppend = useCallback(() => {
-    const newProducts = buildNewProducts();
-    for (const product of newProducts) {
+    const genre = analysisResult?.genre;
+    const midUsd = getStarterTierMidpointUsd(genre);
+    const midKrw = Math.round(midUsd * KRW_USD_RATE);
+    const base = buildNewProducts();
+    for (const product of base) {
       addProduct(product);
     }
+    // 기존 + 새 상품 합친 후 필수 상품 확인
+    const allProducts = [...existingProducts, ...base];
+    const withMandatory = ensureMandatoryProducts(allProducts, activeProjectId ?? '', midUsd, midKrw);
+    // 필수 상품이 추가된 경우만 store에 반영
+    if (withMandatory.length > allProducts.length) {
+      const addedMandatory = withMandatory.slice(allProducts.length);
+      for (const product of addedMandatory) {
+        addProduct(product);
+      }
+    }
     setShowApplyMode(false);
-    setApplySuccess(`기존 상품에 ${newProducts.length}개가 추가되었습니다`);
+    setApplySuccess(`기존 상품에 ${base.length}개가 추가되었습니다 (NPU유도·오퍼월 필수 포함)`);
     setTimeout(() => { setApplySuccess(null); }, 4000);
-  }, [buildNewProducts, addProduct]);
+  }, [buildNewProducts, addProduct, existingProducts, analysisResult, activeProjectId]);
 
   const pieData = useMemo(
     () =>

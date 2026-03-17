@@ -72,21 +72,74 @@ function formatDateForDisplay(): string {
  * Build the HTML section for game analysis results.
  */
 function buildAnalysisSection(analysis: GameStructure): string {
+  const currencyRows = analysis.currencies
+    .map(
+      (c) => `
+        <tr>
+          <td>${c.name}</td>
+          <td><span class="badge ${c.type === 'hard' ? 'badge-hard' : c.type === 'soft' ? 'badge-soft' : c.type === 'premium' ? 'badge-premium' : 'badge-event'}">${c.type === 'hard' ? '유료 재화' : c.type === 'soft' ? '무료 재화' : c.type === 'premium' ? '프리미엄' : '이벤트'}</span></td>
+          <td>${c.earnableFree ? 'O' : 'X'}</td>
+          <td>${c.purchasable ? 'O' : 'X'}</td>
+        </tr>`,
+    )
+    .join('');
+
+  const progressionTags = analysis.progressionSystems
+    .map((s) => `<span class="tag">${s}</span>`)
+    .join(' ');
+
+  const socialList = analysis.socialFeatures
+    .map((s) => `<li>${s}</li>`)
+    .join('');
+
+  const retentionList = analysis.retentionHooks
+    .map((s) => `<li class="retention-item">${s}</li>`)
+    .join('');
+
+  const competitiveList = analysis.competitiveElements
+    .map((s) => `<li class="competitive-item">${s}</li>`)
+    .join('');
+
   return `
     <section class="section">
-      <h2>1. 게임 분석 결과</h2>
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="label">장르</span>
-          <span class="value">${GAME_GENRE_LABELS.get(analysis.genre) ?? analysis.genre}</span>
-        </div>
-        <div class="info-item">
-          <span class="label">코어 루프</span>
-          <span class="value">${analysis.coreLoop}</span>
-        </div>
-      </div>
-      <h3>AI 분석 원본</h3>
-      <div class="raw-analysis">${analysis.rawAnalysis}</div>
+      <h2>게임 구조 분석 결과</h2>
+      <p class="section-subtitle">AI가 마인드맵에서 추출한 게임 유료화 구조</p>
+
+      <h3>장르</h3>
+      <div class="genre-badge">${GAME_GENRE_LABELS.get(analysis.genre) ?? analysis.genre}</div>
+
+      <h3>코어 루프</h3>
+      <div class="core-loop-box">${analysis.coreLoop}</div>
+
+      ${analysis.progressionSystems.length > 0 ? `
+      <h3>성장 시스템</h3>
+      <div class="tag-list">${progressionTags}</div>
+      ` : ''}
+
+      ${analysis.socialFeatures.length > 0 ? `
+      <h3>소셜 기능</h3>
+      <ul class="feature-list">${socialList}</ul>
+      ` : ''}
+
+      ${analysis.currencies.length > 0 ? `
+      <h3>재화 시스템</h3>
+      <table>
+        <thead>
+          <tr><th>이름</th><th>유형</th><th>무료 획득</th><th>구매 가능</th></tr>
+        </thead>
+        <tbody>${currencyRows}</tbody>
+      </table>
+      ` : ''}
+
+      ${analysis.retentionHooks.length > 0 ? `
+      <h3>리텐션 장치</h3>
+      <ul class="feature-list retention-list">${retentionList}</ul>
+      ` : ''}
+
+      ${analysis.competitiveElements.length > 0 ? `
+      <h3>경쟁 요소</h3>
+      <ul class="feature-list competitive-list">${competitiveList}</ul>
+      ` : ''}
     </section>`;
 }
 
@@ -444,18 +497,79 @@ function buildReportStyles(): string {
         color: #1f2937;
         font-family: 'SF Mono', 'Fira Code', monospace;
       }
-      .raw-analysis {
-        white-space: pre-wrap;
+      .section-subtitle {
         font-size: 13px;
-        line-height: 1.8;
-        color: #374151;
-        padding: 16px;
-        background: #ffffff;
+        color: #6b7280;
+        margin-bottom: 16px;
+      }
+      .genre-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        background: #eef2ff;
+        color: #4f46e5;
         border-radius: 6px;
-        border: 1px solid #e5e7eb;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .core-loop-box {
+        padding: 12px 16px;
+        background: #f3f4f6;
+        border-radius: 6px;
+        font-size: 13px;
+        line-height: 1.7;
+        color: #374151;
         word-break: keep-all;
         overflow-wrap: break-word;
       }
+      .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .tag {
+        display: inline-block;
+        padding: 3px 10px;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 12px;
+        color: #374151;
+      }
+      .feature-list {
+        list-style: none;
+        padding-left: 0;
+      }
+      .feature-list li {
+        padding: 3px 0 3px 18px;
+        position: relative;
+        font-size: 13px;
+        color: #374151;
+      }
+      .feature-list li::before {
+        content: '\\2022';
+        position: absolute;
+        left: 4px;
+        font-weight: bold;
+      }
+      .retention-list li::before {
+        color: #10b981;
+      }
+      .competitive-list li::before {
+        color: #ef4444;
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .badge-hard { background: #fef3c7; color: #92400e; }
+      .badge-soft { background: #d1fae5; color: #065f46; }
+      .badge-premium { background: #ede9fe; color: #5b21b6; }
+      .badge-event { background: #fce7f3; color: #9d174d; }
       ul {
         list-style: none;
         padding-left: 0;

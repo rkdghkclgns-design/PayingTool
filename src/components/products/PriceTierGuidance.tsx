@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Zap, DollarSign, Crown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, ChevronRight, Zap, DollarSign, Crown, ArrowRight, Settings } from 'lucide-react';
 import type { PriceTier } from '../../models/genre-blueprint';
-import { useMindmapStore } from '../../stores/mindmap-store';
+import { useGenreStore } from '../../stores/genre-store';
 import { getGenreBlueprint } from '../../data/genre-blueprints/index';
+import type { GameGenre } from '../../models';
 
 // ─────────────────────────────────────────────
 // Tier visual config
@@ -38,16 +40,45 @@ const TIER_STYLE: Readonly<Record<PriceTier['tier'], {
 };
 
 // ─────────────────────────────────────────────
-// Component — 장르가 지정된 경우에만 렌더링
+// Component — 장르 설계도 기준으로 가격 전략 표시
 // ─────────────────────────────────────────────
 export default function PriceTierGuidance() {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const genre = useMindmapStore((s) => s.analysisResult?.genre);
-  const blueprint = genre ? getGenreBlueprint(genre) : undefined;
+  const selectedGenre = useGenreStore((s) => s.selectedGenre);
+  const blueprint = selectedGenre
+    ? getGenreBlueprint(selectedGenre as GameGenre)
+    : undefined;
 
-  // 장르가 지정되지 않으면 렌더링하지 않음
-  if (!blueprint) return null;
+  // 장르가 선택되지 않은 경우 → 안내 메시지 + 장르 설계도 링크
+  if (!selectedGenre || !blueprint) {
+    return (
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 text-sm font-semibold text-gray-800 dark:text-gray-200">
+          <Settings className="w-4 h-4 text-gray-400" />
+          장르 가격 전략
+        </div>
+        <div className="px-4 pb-4">
+          <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+            <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
+              장르가 선택되지 않았습니다.
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+              장르 설계도에서 장르를 먼저 지정해주세요. 장르에 맞는 가격 전략이 여기에 표시됩니다.
+            </p>
+            <button
+              onClick={() => navigate('/blueprint')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors cursor-pointer"
+            >
+              장르 설계도로 이동
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
