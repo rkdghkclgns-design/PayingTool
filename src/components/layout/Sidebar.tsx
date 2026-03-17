@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -8,9 +9,12 @@ import {
   Database,
   Map,
   BookOpen,
+  Key,
   X,
 } from 'lucide-react';
 import { useUiStore } from '../../stores/ui-store';
+import { hasApiKey } from '../../services/gemini';
+import ApiKeySettings from '../settings/ApiKeySettings';
 
 interface NavItem {
   readonly path: string;
@@ -32,6 +36,12 @@ const navItems: readonly NavItem[] = [
 export default function Sidebar() {
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
+  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
+  const [keyConfigured, setKeyConfigured] = useState(false);
+
+  useEffect(() => {
+    setKeyConfigured(hasApiKey());
+  }, [apiKeyModalOpen]);
 
   return (
     <>
@@ -108,12 +118,37 @@ export default function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800">
+        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 space-y-2">
+          <button
+            type="button"
+            onClick={() => setApiKeyModalOpen(true)}
+            className={`
+              w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+              transition-colors duration-150 cursor-pointer
+              ${
+                keyConfigured
+                  ? 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950'
+                  : 'text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950'
+              }
+            `.trim()}
+          >
+            <Key className="w-4 h-4 flex-shrink-0" />
+            <span>{keyConfigured ? 'API 키 설정됨' : 'API 키 설정'}</span>
+            {!keyConfigured && (
+              <span className="ml-auto w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            )}
+          </button>
           <p className="text-xs text-gray-400 dark:text-gray-600">
-            PayingTool v1.0.0
+            PayingTool v3.0.0
           </p>
         </div>
       </aside>
+
+      {/* API Key Settings Modal */}
+      <ApiKeySettings
+        isOpen={apiKeyModalOpen}
+        onClose={() => setApiKeyModalOpen(false)}
+      />
     </>
   );
 }

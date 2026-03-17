@@ -11,10 +11,31 @@ import {
   PRODUCT_MIX_PROMPT,
 } from './gemini-prompts';
 
-const API_KEY = 'AIzaSyB7_sKZYkNCsQ17bcRG-ncIqmevTtAxnY0';
+const STORAGE_KEY = 'paying_tool_gemini_api_key';
+
+export const getApiKey = (): string | null => {
+  return localStorage.getItem(STORAGE_KEY);
+};
+
+export const setApiKey = (key: string): void => {
+  localStorage.setItem(STORAGE_KEY, key);
+};
+
+export const clearApiKey = (): void => {
+  localStorage.removeItem(STORAGE_KEY);
+};
+
+export const hasApiKey = (): boolean => {
+  const key = getApiKey();
+  return key !== null && key.trim().length > 0;
+};
 
 const createClient = () => {
-  const genAI = new GoogleGenerativeAI(API_KEY);
+  const apiKey = getApiKey();
+  if (!apiKey || apiKey.trim().length === 0) {
+    throw new Error('Gemini API 키가 설정되지 않았습니다. 상단의 설정 버튼에서 API 키를 입력하세요.');
+  }
+  const genAI = new GoogleGenerativeAI(apiKey);
   return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 };
 
