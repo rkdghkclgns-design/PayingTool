@@ -8,6 +8,7 @@ import PageContainer from '../layout/PageContainer';
 import Button from '../ui/Button';
 import EmptyState from '../ui/EmptyState';
 import AiProductMixPanel from './AiProductMixPanel';
+import PriceTierGuidance from './PriceTierGuidance';
 import SegmentTabs from './SegmentTabs';
 import ProductCard from './ProductCard';
 import ProductList from './ProductList';
@@ -81,6 +82,9 @@ export default function ProductBuilderPage() {
     <PageContainer title="상품 빌더" description="인앱 상품을 설계하고 가격 전략을 수립합니다.">
       {/* AI Product Mix Recommendation */}
       <AiProductMixPanel />
+
+      {/* Genre Price Strategy */}
+      <PriceTierGuidance />
 
       {/* Segment Tabs */}
       <SegmentTabs

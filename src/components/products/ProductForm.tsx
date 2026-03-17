@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, X } from 'lucide-react';
 import type { Product, ProductCategory, UserSegment, RetentionStage, ProductContent, PurchaseLimit } from '../../models';
+import type { PriceTier } from '../../models/genre-blueprint';
 import {
   PRODUCT_CATEGORY_LABELS,
   USER_SEGMENT_LABELS,
   RETENTION_STAGE_LABELS,
   KRW_USD_RATE,
 } from '../../utils/constants';
+import { useMindmapStore } from '../../stores/mindmap-store';
+import { getGenreBlueprint } from '../../data/genre-blueprints/index';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
@@ -98,6 +101,28 @@ export default function ProductForm({ isOpen, onClose, onSubmit, editingProduct,
     updateField('targetSegments', updated);
   };
 
+  // ── Genre-based price suggestion ──────────────
+  const genre = useMindmapStore((s) => s.analysisResult?.genre);
+  const blueprint = genre ? getGenreBlueprint(genre) : undefined;
+
+  const suggestedTier: PriceTier | undefined = useMemo(() => {
+    if (!blueprint) return undefined;
+    const segments = form.targetSegments;
+    const tierName: PriceTier['tier'] =
+      segments.includes('whale') || segments.includes('super_whale')
+        ? 'whale'
+        : segments.includes('dolphin')
+          ? 'mid'
+          : 'starter';
+    return blueprint.priceTiers.find((t) => t.tier === tierName);
+  }, [blueprint, form.targetSegments]);
+
+  const applySuggestedPrice = () => {
+    if (!suggestedTier) return;
+    const midpoint = ((suggestedTier.minUsd + suggestedTier.maxUsd) / 2).toFixed(2);
+    updateField('priceUSD', midpoint);
+  };
+
   const updateContent = (index: number, field: keyof ProductContent, value: string | number) => {
     const updated = form.contents.map((c, i) =>
       i === index ? { ...c, [field]: value } : c
@@ -181,11 +206,22 @@ export default function ProductForm({ isOpen, onClose, onSubmit, editingProduct,
         <Select label="대상 리텐션 단계" options={retentionOptions} value={form.targetRetentionStage} onChange={(v) => updateField('targetRetentionStage', v as RetentionStage)} />
 
         {/* Price */}
-        <div className="flex items-end gap-3">
-          <Input label="가격 (USD) *" type="number" value={form.priceUSD} onChange={(v) => updateField('priceUSD', v)} placeholder="0.99" error={errors.priceUSD} className="flex-1" />
-          <div className="pb-1 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-            {priceKRWPreview > 0 ? `= ₩${priceKRWPreview.toLocaleString('ko-KR')}` : ''}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-end gap-3">
+            <Input label="가격 (USD) *" type="number" value={form.priceUSD} onChange={(v) => updateField('priceUSD', v)} placeholder="0.99" error={errors.priceUSD} className="flex-1" />
+            <div className="pb-1 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {priceKRWPreview > 0 ? `= ₩${priceKRWPreview.toLocaleString('ko-KR')}` : ''}
+            </div>
           </div>
+          {suggestedTier && blueprint && (
+            <button
+              type="button"
+              onClick={applySuggestedPrice}
+              className="self-start text-xs text-brand-500 cursor-pointer hover:underline"
+            >
+              추천 가격: ${suggestedTier.minUsd.toFixed(2)} - ${suggestedTier.maxUsd.toFixed(2)} ({blueprint.genreLabelKo} 장르 {suggestedTier.labelKo} 티어)
+            </button>
+          )}
         </div>
 
         {/* Contents */}

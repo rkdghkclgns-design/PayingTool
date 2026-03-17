@@ -82,10 +82,15 @@ export const recommendProducts = async (structure: GameStructure): Promise<Produ
   });
 };
 
-export const generateSchemas = async (products: Product[]): Promise<DataSchema[]> => {
+export const generateSchemas = async (
+  products: Product[],
+  genre?: string,
+): Promise<DataSchema[]> => {
   return retryWithBackoff(async () => {
     const model = createClient();
-    const prompt = SCHEMA_GENERATION_PROMPT.replace('{{PRODUCTS}}', JSON.stringify(products, null, 2));
+    const prompt = SCHEMA_GENERATION_PROMPT
+      .replace('{{PRODUCTS}}', JSON.stringify(products, null, 2))
+      .replace('{{GENRE}}', genre ?? 'other');
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     return parseJsonResponse<DataSchema[]>(text);

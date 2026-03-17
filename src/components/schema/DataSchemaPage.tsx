@@ -6,6 +6,7 @@ import SchemaViewer from './SchemaViewer';
 import SchemaExporter from './SchemaExporter';
 import { useSchemaStore } from '../../stores/schema-store';
 import { useProductStore } from '../../stores/product-store';
+import { useMindmapStore } from '../../stores/mindmap-store';
 import { generateSchemasFromProducts } from '../../utils/schema-generator';
 import { DEFAULT_SCHEMAS } from '../../data/schema-templates';
 
@@ -13,15 +14,17 @@ export default function DataSchemaPage() {
   const setSchemas = useSchemaStore((s) => s.setSchemas);
   const schemas = useSchemaStore((s) => s.schemas);
   const products = useProductStore((s) => s.products);
+  const analysisResult = useMindmapStore((s) => s.analysisResult);
+  const genre = analysisResult?.genre;
   const [selectedSchemaId, setSelectedSchemaId] = useState<string | null>(null);
 
   const handleAutoGenerate = useCallback(() => {
-    const generated = generateSchemasFromProducts(products);
+    const generated = generateSchemasFromProducts(products, genre);
     setSchemas(generated);
     if (generated.length > 0) {
       setSelectedSchemaId(generated[0].id);
     }
-  }, [products, setSchemas]);
+  }, [products, genre, setSchemas]);
 
   const handleLoadTemplates = useCallback(() => {
     setSchemas(DEFAULT_SCHEMAS);

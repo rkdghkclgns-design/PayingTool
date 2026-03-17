@@ -1,13 +1,34 @@
 import type { Product, DataSchema, SchemaField } from '../models';
+import {
+  buildGachaPoolsSchema,
+  buildBattlePassSeasonsSchema,
+  buildBattlePassTiersSchema,
+  buildSubscriptionsSchema,
+  buildVipTiersSchema,
+  buildCosmeticsSchema,
+  buildEnergySystemSchema,
+  buildBoostsSchema,
+  buildBundleContentsSchema,
+  buildAdPlacementsSchema,
+  buildEnhancementHistorySchema,
+  buildGuildsSchema,
+  buildGuildMembersSchema,
+  buildRankingsSchema,
+  buildGameServersSchema,
+  buildAchievementsSchema,
+} from './schema-builders';
 
 /**
  * Generate database schemas from a list of products.
- * Creates tables for products, purchases, users, and product_contents.
+ * Creates base tables (users, products, product_contents, purchases)
+ * plus conditional tables based on product categories and game genre.
  */
 export function generateSchemasFromProducts(
   products: readonly Product[],
+  genre?: string,
 ): readonly DataSchema[] {
   const now = new Date().toISOString();
+  const categoriesUsed = new Set(products.map((p) => p.category));
 
   const usersSchema: DataSchema = {
     id: 'schema_users',
@@ -33,7 +54,7 @@ export function generateSchemasFromProducts(
     updatedAt: now,
   };
 
-  const categoriesUsed = [...new Set(products.map((p) => p.category))];
+  const categoryList = [...categoriesUsed];
 
   const productsSchema: DataSchema = {
     id: 'schema_products',
@@ -44,7 +65,7 @@ export function generateSchemasFromProducts(
       createField('name', 'string', { description: '상품명' }),
       createField('description', 'string', { description: '상품 설명', nullable: true }),
       createField('category', 'enum', {
-        enumValues: categoriesUsed.length > 0 ? categoriesUsed : ['other'],
+        enumValues: categoryList.length > 0 ? categoryList : ['other'],
         description: '상품 카테고리',
       }),
       createField('price_krw', 'number', { description: '가격 (KRW)' }),
@@ -139,7 +160,64 @@ export function generateSchemasFromProducts(
     updatedAt: now,
   };
 
-  return [usersSchema, productsSchema, productContentsSchema, purchasesSchema];
+  // Base schemas (always included)
+  const schemas: DataSchema[] = [usersSchema, productsSchema, productContentsSchema, purchasesSchema];
+
+  // Conditional tables based on product categories
+  if (categoriesUsed.has('gacha')) {
+    schemas.push(buildGachaPoolsSchema());
+  }
+  if (categoriesUsed.has('battle_pass')) {
+    schemas.push(buildBattlePassSeasonsSchema());
+    schemas.push(buildBattlePassTiersSchema());
+  }
+  if (categoriesUsed.has('subscription')) {
+    schemas.push(buildSubscriptionsSchema());
+  }
+  if (categoriesUsed.has('vip')) {
+    schemas.push(buildVipTiersSchema());
+  }
+  if (categoriesUsed.has('cosmetic')) {
+    schemas.push(buildCosmeticsSchema());
+  }
+  if (categoriesUsed.has('energy')) {
+    schemas.push(buildEnergySystemSchema());
+  }
+  if (categoriesUsed.has('boost')) {
+    schemas.push(buildBoostsSchema());
+  }
+  if (categoriesUsed.has('bundle')) {
+    schemas.push(buildBundleContentsSchema());
+  }
+
+  // Genre-specific tables
+  if (genre === 'rpg' || genre === 'mmorpg') {
+    schemas.push(buildEnhancementHistorySchema());
+    schemas.push(buildGuildsSchema());
+    schemas.push(buildGuildMembersSchema());
+    schemas.push(buildRankingsSchema());
+    schemas.push(buildAchievementsSchema());
+  }
+  if (genre === 'mmorpg' || genre === 'strategy') {
+    if (!schemas.some((s) => s.tableName === 'guilds')) {
+      schemas.push(buildGuildsSchema());
+      schemas.push(buildGuildMembersSchema());
+    }
+    schemas.push(buildGameServersSchema());
+    if (!schemas.some((s) => s.tableName === 'rankings')) {
+      schemas.push(buildRankingsSchema());
+    }
+  }
+  if (genre === 'casual' || genre === 'puzzle' || genre === 'idle') {
+    if (!schemas.some((s) => s.tableName === 'ad_placements')) {
+      schemas.push(buildAdPlacementsSchema());
+    }
+    if (!schemas.some((s) => s.tableName === 'energy_system')) {
+      schemas.push(buildEnergySystemSchema());
+    }
+  }
+
+  return schemas;
 }
 
 interface FieldOptions {
@@ -153,7 +231,7 @@ interface FieldOptions {
   readonly defaultValue?: string;
 }
 
-function createField(
+export function createField(
   name: string,
   type: SchemaField['type'],
   options: FieldOptions = {},

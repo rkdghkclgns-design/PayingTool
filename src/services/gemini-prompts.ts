@@ -69,7 +69,9 @@ export const PRODUCT_RECOMMENDATION_PROMPT = `당신은 게임 유료화 전략 
 7. 모든 상품명과 설명은 한국어로
 8. 최소 15개 이상의 상품을 추천하세요`;
 
-export const SCHEMA_GENERATION_PROMPT = `당신은 게임 백엔드 데이터베이스 설계 전문가입니다. 다음 유료화 상품 목록을 분석하고, 필요한 데이터베이스 스키마를 생성하세요.
+export const SCHEMA_GENERATION_PROMPT = `당신은 게임 백엔드 데이터베이스 설계 전문가입니다. 다음 유료화 상품 목록과 게임 장르를 분석하고, 최적의 데이터베이스 스키마를 생성하세요.
+
+게임 장르: {{GENRE}}
 
 상품 목록:
 {{PRODUCTS}}
@@ -85,10 +87,12 @@ export const SCHEMA_GENERATION_PROMPT = `당신은 게임 백엔드 데이터베
     "fields": [
       {
         "name": "필드명",
-        "type": "string | number | boolean | datetime | json | enum",
-        "required": true,
+        "type": "string | number | boolean | datetime | json | uuid | enum",
+        "nullable": false,
         "isPrimaryKey": false,
         "isForeignKey": false,
+        "foreignTable": null,
+        "foreignField": null,
         "defaultValue": null,
         "enumValues": null,
         "description": "필드 설명 (한국어)"
@@ -107,8 +111,41 @@ export const SCHEMA_GENERATION_PROMPT = `당신은 게임 백엔드 데이터베
 ]
 \`\`\`
 
-필수 테이블: users, products, purchases, currencies, inventory
-상품 유형에 따라 추가: gacha_pools, subscriptions, battle_pass, vip_tiers, promotions`;
+## 필수 테이블
+모든 게임에 반드시 포함: users, products, product_contents, purchases
+
+## 상품 유형별 조건부 테이블
+상품 목록에 해당 유형이 포함되어 있을 때만 추가하세요:
+- gacha, loot_box → gacha_pools (가챠 풀 구성, 확률 정보)
+- battle_pass → battle_pass_seasons (시즌 정보), battle_pass_tiers (티어별 보상)
+- subscription → subscriptions (구독 관리, 결제 주기)
+- vip_membership → vip_tiers (VIP 등급별 혜택)
+- cosmetics → cosmetics (코스메틱 아이템 카탈로그)
+- energy_stamina → energy_system (에너지 충전 주기, 최대치)
+- progression_boost → boosts (부스트 유형, 지속 시간)
+- season_content → seasonal_content (시즌 컨텐츠 일정)
+- expansion_dlc → dlc_expansions (확장팩 목록, 잠금 해제)
+- bundles → bundle_contents (번들 구성 상세)
+- rewarded_ads, offerwalls → ad_placements (광고 지면, 보상 설정)
+
+## 장르별 추천 테이블
+게임 장르에 따라 아래 테이블을 추가로 고려하세요:
+- RPG / MMORPG → enhancement_history (강화 이력), guilds (길드), guild_members (길드원), rankings (랭킹), achievements (업적)
+- Strategy → guilds (길드/동맹), guild_members (동맹원), rankings (랭킹), game_servers (서버 목록)
+- Casual / Puzzle → energy_system (에너지 시스템), ad_placements (광고 지면)
+- MMORPG → game_servers (게임 서버 목록)
+
+## 스키마 설계 원칙
+1. 모든 테이블에는 uuid 타입의 id 기본키를 포함하세요.
+2. 외래키 관계를 명확히 정의하고, relations 배열에 반드시 반영하세요.
+3. created_at, updated_at 타임스탬프 필드를 각 테이블에 포함하세요.
+4. enum 필드에는 반드시 enumValues 배열을 지정하세요.
+5. 정규화(3NF)를 준수하되, 조회 성능을 위한 비정규화는 허용합니다.
+6. 테이블명과 필드명은 snake_case 영문으로 작성하세요.
+7. description은 모든 항목에 대해 한국어로 작성하세요.
+8. 금액 필드는 number 타입으로, KRW와 USD를 분리하세요.
+9. 상품 간 관계(번들 구성, 가챠 풀 등)를 중간 테이블로 표현하세요.
+10. 불필요한 테이블은 생성하지 마세요. 상품 목록에 없는 유형의 테이블은 제외합니다.`;
 
 export const FUNNEL_STRATEGY_PROMPT = `당신은 게임 유저 퍼널 최적화 전문가입니다. 다음 게임 구조를 분석하고, 8단계 퍼널의 각 단계별 전략을 제안하세요.
 
