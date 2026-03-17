@@ -44,3 +44,13 @@ export type {
   KnowledgeEntry,
   BenchmarkData,
 } from './knowledge';
+
+export type {
+  ProductMixItem,
+  PriceTier,
+  RangedMetric,
+  BenchmarkKpis,
+  RegionalLtv,
+  SuccessfulExample,
+  GenreBlueprint,
+} from './genre-blueprint';

@@ -14,7 +14,9 @@ interface SchemaActions {
   ) => void;
   deleteSchema: (id: string) => void;
   addField: (schemaId: string, field: SchemaField) => void;
+  updateField: (schemaId: string, fieldName: string, updates: Partial<SchemaField>) => void;
   removeField: (schemaId: string, fieldName: string) => void;
+  updateTableName: (schemaId: string, newName: string) => void;
   addRelation: (schemaId: string, relation: SchemaRelation) => void;
   removeRelation: (
     schemaId: string,
@@ -74,6 +76,22 @@ export const useSchemaStore = create<SchemaStore>()(
           ),
         })),
 
+      updateField: (schemaId: string, fieldName: string, updates: Partial<SchemaField>) =>
+        set((state) => ({
+          ...state,
+          schemas: state.schemas.map((schema) =>
+            schema.id === schemaId
+              ? {
+                  ...schema,
+                  fields: schema.fields.map((field) =>
+                    field.name === fieldName ? { ...field, ...updates } : field,
+                  ),
+                  updatedAt: new Date().toISOString(),
+                }
+              : schema,
+          ),
+        })),
+
       removeField: (schemaId: string, fieldName: string) =>
         set((state) => ({
           ...state,
@@ -82,6 +100,20 @@ export const useSchemaStore = create<SchemaStore>()(
               ? {
                   ...schema,
                   fields: schema.fields.filter((f) => f.name !== fieldName),
+                  updatedAt: new Date().toISOString(),
+                }
+              : schema,
+          ),
+        })),
+
+      updateTableName: (schemaId: string, newName: string) =>
+        set((state) => ({
+          ...state,
+          schemas: state.schemas.map((schema) =>
+            schema.id === schemaId
+              ? {
+                  ...schema,
+                  tableName: newName,
                   updatedAt: new Date().toISOString(),
                 }
               : schema,

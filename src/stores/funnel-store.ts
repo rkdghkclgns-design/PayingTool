@@ -10,8 +10,13 @@ interface FunnelState {
 interface FunnelActions {
   updateStage: (
     id: string,
-    updates: Partial<Pick<FunnelStage, 'conversionRate' | 'description'>>,
+    updates: Partial<Pick<FunnelStage, 'conversionRate' | 'description' | 'label'>>,
   ) => void;
+  addStage: (label: string, description: string) => void;
+  removeStage: (id: string) => void;
+  reorderStages: (fromIndex: number, toIndex: number) => void;
+  updateStageLabel: (id: string, label: string) => void;
+  updateStageDescription: (id: string, description: string) => void;
   assignProduct: (stageId: string, productId: string) => void;
   removeProduct: (stageId: string, productId: string) => void;
   resetStages: () => void;
@@ -21,6 +26,10 @@ type FunnelStore = FunnelState & FunnelActions;
 
 function generateStageId(name: FunnelStageName): string {
   return `funnel_${name}`;
+}
+
+function generateCustomStageId(): string {
+  return `funnel_custom_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function createDefaultStages(): readonly FunnelStage[] {
@@ -46,6 +55,13 @@ function createDefaultStages(): readonly FunnelStage[] {
   }));
 }
 
+function recalculateOrder(stages: readonly FunnelStage[]): readonly FunnelStage[] {
+  return stages.map((stage, index) => ({
+    ...stage,
+    order: index,
+  }));
+}
+
 const initialState: FunnelState = {
   stages: createDefaultStages(),
 };
@@ -57,12 +73,77 @@ export const useFunnelStore = create<FunnelStore>()(
 
       updateStage: (
         id: string,
-        updates: Partial<Pick<FunnelStage, 'conversionRate' | 'description'>>,
+        updates: Partial<Pick<FunnelStage, 'conversionRate' | 'description' | 'label'>>,
       ) =>
         set((state) => ({
           ...state,
           stages: state.stages.map((stage) =>
             stage.id === id ? { ...stage, ...updates } : stage,
+          ),
+        })),
+
+      addStage: (label: string, description: string) =>
+        set((state) => {
+          const newStage: FunnelStage = {
+            id: generateCustomStageId(),
+            name: `custom_${Date.now()}`,
+            label,
+            order: state.stages.length,
+            conversionRate: 0.5,
+            assignedProductIds: [],
+            description,
+          };
+          return {
+            ...state,
+            stages: [...state.stages, newStage],
+          };
+        }),
+
+      removeStage: (id: string) =>
+        set((state) => {
+          if (state.stages.length <= 2) {
+            return state;
+          }
+          const filtered = state.stages.filter((stage) => stage.id !== id);
+          return {
+            ...state,
+            stages: recalculateOrder(filtered),
+          };
+        }),
+
+      reorderStages: (fromIndex: number, toIndex: number) =>
+        set((state) => {
+          if (
+            fromIndex < 0 ||
+            toIndex < 0 ||
+            fromIndex >= state.stages.length ||
+            toIndex >= state.stages.length ||
+            fromIndex === toIndex
+          ) {
+            return state;
+          }
+          const mutableStages = [...state.stages];
+          const [moved] = mutableStages.splice(fromIndex, 1);
+          mutableStages.splice(toIndex, 0, moved);
+          return {
+            ...state,
+            stages: recalculateOrder(mutableStages),
+          };
+        }),
+
+      updateStageLabel: (id: string, label: string) =>
+        set((state) => ({
+          ...state,
+          stages: state.stages.map((stage) =>
+            stage.id === id ? { ...stage, label } : stage,
+          ),
+        })),
+
+      updateStageDescription: (id: string, description: string) =>
+        set((state) => ({
+          ...state,
+          stages: state.stages.map((stage) =>
+            stage.id === id ? { ...stage, description } : stage,
           ),
         })),
 

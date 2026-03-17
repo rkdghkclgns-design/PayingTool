@@ -7,6 +7,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import { DollarSign, TrendingUp, Calendar, RotateCcw } from 'lucide-react';
@@ -16,7 +17,23 @@ import { simulateRevenue } from '../../utils/revenue-calculator';
 import { formatCompactNumber, formatUSD, formatNumber } from '../../utils/formatters';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
+import Badge from '../ui/Badge';
+import KpiTargetSettings from './KpiTargetSettings';
+import KpiTargetSummary from './KpiTargetSummary';
 
+// ─────────────────────────────────────────────
+// Target key mapping for slider badges
+// ─────────────────────────────────────────────
+const TARGET_KEY_MAP: Readonly<Partial<Record<keyof MetricsConfig, keyof MetricsConfig>>> = {
+  conversionRate: 'targetConversion',
+  d1Retention: 'targetD1Retention',
+  d7Retention: 'targetD7Retention',
+  d30Retention: 'targetD30Retention',
+};
+
+// ─────────────────────────────────────────────
+// MetricSlider with optional target badge
+// ─────────────────────────────────────────────
 interface MetricSliderProps {
   readonly label: string;
   readonly value: number;
@@ -24,14 +41,24 @@ interface MetricSliderProps {
   readonly max: number;
   readonly step: number;
   readonly suffix?: string;
+  readonly target?: number;
   readonly onChange: (value: number) => void;
 }
 
-function MetricSlider({ label, value, min, max, step, suffix = '', onChange }: MetricSliderProps) {
+function MetricSlider({ label, value, min, max, step, suffix = '', target, onChange }: MetricSliderProps) {
+  const achieved = target !== undefined ? value >= target : undefined;
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex justify-between items-center">
-        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>
+          {achieved !== undefined && (
+            <Badge variant={achieved ? 'success' : 'danger'} size="sm">
+              {achieved ? '달성' : '미달성'}
+            </Badge>
+          )}
+        </div>
         <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
           {typeof value === 'number' && value < 1 && suffix === '%'
             ? `${(value * 100).toFixed(1)}%`
@@ -51,6 +78,9 @@ function MetricSlider({ label, value, min, max, step, suffix = '', onChange }: M
   );
 }
 
+// ─────────────────────────────────────────────
+// Slider config
+// ─────────────────────────────────────────────
 const SLIDER_CONFIGS: readonly {
   readonly key: keyof MetricsConfig;
   readonly label: string;
@@ -70,6 +100,30 @@ const SLIDER_CONFIGS: readonly {
   { key: 'd30Retention', label: 'D30 리텐션', min: 0.005, max: 0.3, step: 0.005, suffix: '%' },
 ];
 
+// ─────────────────────────────────────────────
+// SummaryCard
+// ─────────────────────────────────────────────
+interface SummaryCardProps {
+  readonly icon: ReactNode;
+  readonly label: string;
+  readonly value: string;
+}
+
+function SummaryCard({ icon, label, value }: SummaryCardProps) {
+  return (
+    <div className="flex flex-col gap-1 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
+      <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+        {icon}
+        <span className="text-xs font-medium">{label}</span>
+      </div>
+      <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{value}</span>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// RevenueSimulator (main)
+// ─────────────────────────────────────────────
 export default function RevenueSimulator() {
   const config = useMetricsStore((s) => s.config);
   const updateMetric = useMetricsStore((s) => s.updateMetric);
@@ -89,120 +143,93 @@ export default function RevenueSimulator() {
   );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Controls */}
-      <Card
-        title="지표 설정"
-        headerAction={
-          <Button variant="ghost" size="sm" icon={<RotateCcw className="w-3.5 h-3.5" />} onClick={resetConfig}>
-            초기화
-          </Button>
-        }
-      >
-        <div className="flex flex-col gap-4">
-          {SLIDER_CONFIGS.map((sc) => (
-            <MetricSlider
-              key={sc.key}
-              label={sc.label}
-              value={config[sc.key]}
-              min={sc.min}
-              max={sc.max}
-              step={sc.step}
-              suffix={sc.suffix}
-              onChange={(v) => updateMetric(sc.key, v)}
-            />
-          ))}
-        </div>
-      </Card>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Controls */}
+        <div className="flex flex-col gap-6">
+          <Card
+            title="지표 설정"
+            headerAction={
+              <Button variant="ghost" size="sm" icon={<RotateCcw className="w-3.5 h-3.5" />} onClick={resetConfig}>
+                초기화
+              </Button>
+            }
+          >
+            <div className="flex flex-col gap-4">
+              {SLIDER_CONFIGS.map((sc) => {
+                const targetKey = TARGET_KEY_MAP[sc.key];
+                const targetValue = targetKey ? (config[targetKey] as number) : undefined;
 
-      {/* Chart + Summary */}
-      <div className="lg:col-span-2 flex flex-col gap-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <SummaryCard
-            icon={<DollarSign className="w-4 h-4" />}
-            label="12개월 총 수익"
-            value={formatUSD(simulation.totalRevenue)}
-          />
-          <SummaryCard
-            icon={<TrendingUp className="w-4 h-4" />}
-            label="LTV"
-            value={formatUSD(simulation.ltv)}
-          />
-          <SummaryCard
-            icon={<Calendar className="w-4 h-4" />}
-            label="페이백 시점"
-            value={simulation.paybackMonth ? `M${simulation.paybackMonth}` : '미달성'}
-          />
-          <SummaryCard
-            icon={<DollarSign className="w-4 h-4" />}
-            label="피크 수익"
-            value={`${formatCompactNumber(simulation.peakRevenue)} (M${simulation.peakMonth})`}
-          />
+                return (
+                  <MetricSlider
+                    key={sc.key}
+                    label={sc.label}
+                    value={config[sc.key]}
+                    min={sc.min}
+                    max={sc.max}
+                    step={sc.step}
+                    suffix={sc.suffix}
+                    target={targetValue}
+                    onChange={(v) => updateMetric(sc.key, v)}
+                  />
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* KPI Target Settings (collapsible) */}
+          <KpiTargetSettings config={config} onUpdateTarget={updateMetric} />
         </div>
 
-        {/* Revenue Chart */}
-        <Card title="12개월 수익 프로젝션">
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis
-                  yAxisId="left"
-                  tickFormatter={(v) => formatCompactNumber(Number(v))}
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  tickFormatter={(v) => formatCompactNumber(Number(v))}
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip
-                  formatter={(value, name) => [
-                    formatUSD(Number(value)),
-                    name === 'revenue' ? '월 수익' : name === 'cumulativeRevenue' ? '누적 수익' : 'DAU',
-                  ]}
-                />
-                <Legend
-                  formatter={(value: string) =>
-                    value === 'revenue' ? '월 수익' : value === 'cumulativeRevenue' ? '누적 수익' : 'DAU'
-                  }
-                />
-                <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2} dot={false} />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="cumulativeRevenue"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line yAxisId="right" type="monotone" dataKey="dau" stroke="#f59e0b" strokeWidth={1.5} dot={false} strokeDasharray="5 5" />
-              </LineChart>
-            </ResponsiveContainer>
+        {/* Chart + Summary */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <SummaryCard icon={<DollarSign className="w-4 h-4" />} label="12개월 총 수익" value={formatUSD(simulation.totalRevenue)} />
+            <SummaryCard icon={<TrendingUp className="w-4 h-4" />} label="LTV" value={formatUSD(simulation.ltv)} />
+            <SummaryCard icon={<Calendar className="w-4 h-4" />} label="페이백 시점" value={simulation.paybackMonth ? `M${simulation.paybackMonth}` : '미달성'} />
+            <SummaryCard icon={<DollarSign className="w-4 h-4" />} label="피크 수익" value={`${formatCompactNumber(simulation.peakRevenue)} (M${simulation.peakMonth})`} />
           </div>
-        </Card>
-      </div>
-    </div>
-  );
-}
 
-interface SummaryCardProps {
-  readonly icon: ReactNode;
-  readonly label: string;
-  readonly value: string;
-}
-
-function SummaryCard({ icon, label, value }: SummaryCardProps) {
-  return (
-    <div className="flex flex-col gap-1 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
-      <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
-        {icon}
-        <span className="text-xs font-medium">{label}</span>
+          {/* Revenue Chart with Target LTV line */}
+          <Card title="12개월 수익 프로젝션">
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis yAxisId="left" tickFormatter={(v) => formatCompactNumber(Number(v))} tick={{ fontSize: 12 }} />
+                  <YAxis yAxisId="right" orientation="right" tickFormatter={(v) => formatCompactNumber(Number(v))} tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    formatter={(value, name) => [
+                      formatUSD(Number(value)),
+                      name === 'revenue' ? '월 수익' : name === 'cumulativeRevenue' ? '누적 수익' : 'DAU',
+                    ]}
+                  />
+                  <Legend
+                    formatter={(value: string) =>
+                      value === 'revenue' ? '월 수익' : value === 'cumulativeRevenue' ? '누적 수익' : 'DAU'
+                    }
+                  />
+                  <ReferenceLine
+                    yAxisId="left"
+                    y={config.targetLtv * config.dau}
+                    stroke="#ef4444"
+                    strokeDasharray="6 4"
+                    label={{ value: `Target LTV ($${config.targetLtv})`, position: 'right', fontSize: 10, fill: '#ef4444' }}
+                  />
+                  <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2} dot={false} />
+                  <Line yAxisId="left" type="monotone" dataKey="cumulativeRevenue" stroke="#10b981" strokeWidth={2} dot={false} />
+                  <Line yAxisId="right" type="monotone" dataKey="dau" stroke="#f59e0b" strokeWidth={1.5} dot={false} strokeDasharray="5 5" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
       </div>
-      <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{value}</span>
+
+      {/* KPI Target Achievement Summary */}
+      <KpiTargetSummary config={config} currentLtv={simulation.ltv} />
     </div>
   );
 }

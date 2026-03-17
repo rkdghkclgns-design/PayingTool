@@ -8,6 +8,10 @@ export type GameGenre =
   | 'sports'
   | 'idle'
   | 'mmorpg'
+  | 'shooter'
+  | 'card_board'
+  | 'moba'
+  | 'racing'
   | 'other';
 
 export type TargetMarket = 'kr' | 'cn' | 'jp' | 'global';

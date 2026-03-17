@@ -143,3 +143,32 @@ export const FUNNEL_STRATEGY_PROMPT = `당신은 게임 유저 퍼널 최적화 
 8. 고래화 (Whale) - 반복 결제의 5~10%
 
 전략은 해당 게임의 장르와 특성에 맞춰 구체적으로 작성하세요.`;
+
+export const PRODUCT_MIX_PROMPT = `당신은 게임 유료화 상품 구성 전문가입니다. 다음 게임 구조를 분석하고, 최적의 상품 믹스(유형별 매출 비율)를 추천하세요.
+
+게임 구조:
+{{GAME_STRUCTURE}}
+
+반드시 다음 JSON 형식으로 응답하세요:
+
+\`\`\`json
+{
+  "mix": [
+    {
+      "type": "gacha | battle_pass | subscription | currency_packs | cosmetics | starter_pack | loot_box | energy_stamina | progression_boost | remove_ads | season_content | expansion_dlc | vip_membership | bundles | rewarded_ads | offerwalls",
+      "label": "상품 유형 한국어 레이블",
+      "percentage": 30,
+      "rationale": "이 비율을 추천하는 구체적인 이유 (한국어)"
+    }
+  ]
+}
+\`\`\`
+
+추천 원칙:
+1. 모든 percentage의 합이 정확히 100이어야 합니다.
+2. 게임 장르와 핵심 루프에 맞는 상품 유형만 포함하세요.
+3. 각 유형의 비율은 해당 장르의 업계 벤치마크를 참고하되, 게임 고유 특성을 반영하세요.
+4. RPG/MMORPG는 가챠와 배틀패스 비중이 높고, 캐주얼은 광고와 코스메틱 비중이 높은 경향이 있습니다.
+5. 최소 4개, 최대 10개 유형을 추천하세요.
+6. rationale은 해당 게임의 시스템(재화, 진행, 소셜 등)과 연결하여 구체적으로 작성하세요.
+7. 모든 텍스트는 한국어로 작성하세요.`;

@@ -12,6 +12,12 @@ export interface MetricsConfig {
   readonly cpi: number;
   readonly cpuKR: number;
   readonly cpuGlobal: number;
+  readonly targetLtv: number;
+  readonly targetArpu: number;
+  readonly targetConversion: number;
+  readonly targetD1Retention: number;
+  readonly targetD7Retention: number;
+  readonly targetD30Retention: number;
 }
 
 export interface SegmentMetrics {

@@ -6,6 +6,7 @@ import {
   Filter,
   BarChart3,
   Database,
+  Map,
   BookOpen,
   X,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ const navItems: readonly NavItem[] = [
   { path: '/funnel', label: '퍼널 디자인', icon: Filter },
   { path: '/metrics', label: '지표 전략', icon: BarChart3 },
   { path: '/schema', label: '데이터 스키마', icon: Database },
+  { path: '/blueprint', label: '장르 설계도', icon: Map },
   { path: '/knowledge', label: '지식베이스', icon: BookOpen },
 ];
 

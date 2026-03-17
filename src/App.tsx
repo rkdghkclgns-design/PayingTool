@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import AppShell from './components/layout/AppShell';
 import DashboardPage from './components/dashboard/DashboardPage';
@@ -7,6 +8,8 @@ import FunnelDesignerPage from './components/funnel/FunnelDesignerPage';
 import MetricsStrategyPage from './components/metrics/MetricsStrategyPage';
 import DataSchemaPage from './components/schema/DataSchemaPage';
 import KnowledgeBasePage from './components/knowledge/KnowledgeBasePage';
+
+const GenreBlueprintPage = lazy(() => import('./components/blueprint/GenreBlueprintPage'));
 
 export default function App() {
   return (
@@ -19,6 +22,14 @@ export default function App() {
           <Route path="/funnel" element={<FunnelDesignerPage />} />
           <Route path="/metrics" element={<MetricsStrategyPage />} />
           <Route path="/schema" element={<DataSchemaPage />} />
+          <Route
+            path="/blueprint"
+            element={
+              <Suspense fallback={<div className="p-8 text-center text-gray-400">로딩 중...</div>}>
+                <GenreBlueprintPage />
+              </Suspense>
+            }
+          />
           <Route path="/knowledge" element={<KnowledgeBasePage />} />
         </Route>
       </Routes>

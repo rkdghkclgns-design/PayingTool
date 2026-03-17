@@ -10,7 +10,17 @@ import FunnelMetricsPanel from './FunnelMetricsPanel';
 import ProductAssignModal from './ProductAssignModal';
 
 export default function FunnelDesignerPage() {
-  const { stages, updateStage, assignProduct, removeProduct, resetStages } = useFunnelStore();
+  const {
+    stages,
+    updateStage,
+    addStage,
+    removeStage,
+    updateStageLabel,
+    updateStageDescription,
+    assignProduct,
+    removeProduct,
+    resetStages,
+  } = useFunnelStore();
   const { products } = useProductStore();
 
   const [totalUsers, setTotalUsers] = useState('100000');
@@ -38,6 +48,37 @@ export default function FunnelDesignerPage() {
       removeProduct(stageId, productId);
     },
     [removeProduct],
+  );
+
+  const handleLabelChange = useCallback(
+    (stageId: string, label: string) => {
+      updateStageLabel(stageId, label);
+    },
+    [updateStageLabel],
+  );
+
+  const handleDescriptionChange = useCallback(
+    (stageId: string, description: string) => {
+      updateStageDescription(stageId, description);
+    },
+    [updateStageDescription],
+  );
+
+  const handleRemoveStage = useCallback(
+    (stageId: string) => {
+      removeStage(stageId);
+      if (selectedStageId === stageId) {
+        setSelectedStageId(null);
+      }
+    },
+    [removeStage, selectedStageId],
+  );
+
+  const handleAddStage = useCallback(
+    (label: string, description: string) => {
+      addStage(label, description);
+    },
+    [addStage],
   );
 
   const handleReset = useCallback(() => {
@@ -89,6 +130,10 @@ export default function FunnelDesignerPage() {
             onConversionChange={handleConversionChange}
             onAssignProduct={handleAssignProduct}
             onRemoveProduct={handleRemoveProduct}
+            onLabelChange={handleLabelChange}
+            onDescriptionChange={handleDescriptionChange}
+            onRemoveStage={handleRemoveStage}
+            onAddStage={handleAddStage}
           />
         </div>
 

@@ -3,11 +3,26 @@ import { DEFAULT_CONVERSION_RATES } from './constants';
 
 export interface FunnelFlowResult {
   readonly stage: string;
-  readonly name: FunnelStageName;
+  readonly name: FunnelStageName | string;
   readonly users: number;
   readonly revenue: number;
   readonly conversionRate: number;
   readonly dropoff: number;
+}
+
+const KNOWN_STAGE_NAMES: ReadonlySet<string> = new Set<FunnelStageName>([
+  'awareness',
+  'first_session',
+  'tutorial_complete',
+  'core_loop_engaged',
+  'first_purchase_prompt',
+  'first_purchase',
+  'repeat_purchase',
+  'subscription_or_vip',
+]);
+
+function isFunnelStageName(name: string): name is FunnelStageName {
+  return KNOWN_STAGE_NAMES.has(name);
 }
 
 /**
@@ -28,7 +43,9 @@ export function calculateFunnelFlow(
     const usersAtStage = Math.round(currentUsers * stage.conversionRate);
     const dropoff = currentUsers - usersAtStage;
 
-    const revenue = estimateStageRevenue(stage.name, usersAtStage);
+    const revenue = isFunnelStageName(stage.name)
+      ? estimateStageRevenue(stage.name, usersAtStage)
+      : 0;
 
     const result: FunnelFlowResult = {
       stage: stage.label,
@@ -80,6 +97,8 @@ export function suggestBottleneck(
   let worstStage: FunnelStageName | null = null;
 
   for (const stage of stages) {
+    if (!isFunnelStageName(stage.name)) continue;
+
     const benchmark = benchmarkRates[stage.name];
     if (benchmark === undefined) continue;
 

@@ -28,6 +28,12 @@ const defaultConfig: MetricsConfig = {
   cpi: 2.5,
   cpuKR: 3.0,
   cpuGlobal: 2.0,
+  targetLtv: 5.0,
+  targetArpu: 0.50,
+  targetConversion: 0.05,
+  targetD1Retention: 0.45,
+  targetD7Retention: 0.25,
+  targetD30Retention: 0.10,
 };
 
 const initialState: MetricsState = {

@@ -12,6 +12,9 @@ import { useSchemaStore } from '../../stores/schema-store';
 import { schemaToSql, schemaToTypeScript } from '../../utils/schema-generator';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import SchemaTableEditor from './SchemaTableEditor';
+
+type PreviewTab = 'table' | 'sql' | 'ts';
 
 interface SchemaViewerProps {
   readonly selectedId: string | null;
@@ -22,7 +25,7 @@ export default function SchemaViewer({ selectedId, onSelect }: SchemaViewerProps
   const schemas = useSchemaStore((s) => s.schemas);
   const deleteSchema = useSchemaStore((s) => s.deleteSchema);
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
-  const [previewTab, setPreviewTab] = useState<'sql' | 'ts'>('sql');
+  const [previewTab, setPreviewTab] = useState<PreviewTab>('table');
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -147,7 +150,11 @@ export default function SchemaViewer({ selectedId, onSelect }: SchemaViewerProps
       {/* Detail / Preview */}
       <div className="lg:col-span-3">
         {selectedSchema ? (
-          <SchemaPreview schema={selectedSchema} activeTab={previewTab} onTabChange={setPreviewTab} />
+          <SchemaDetailPanel
+            schema={selectedSchema}
+            activeTab={previewTab}
+            onTabChange={setPreviewTab}
+          />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm">
             테이블을 선택하면 미리보기를 확인할 수 있습니다
@@ -158,21 +165,27 @@ export default function SchemaViewer({ selectedId, onSelect }: SchemaViewerProps
   );
 }
 
-interface SchemaPreviewProps {
+interface SchemaDetailPanelProps {
   readonly schema: DataSchema;
-  readonly activeTab: 'sql' | 'ts';
-  readonly onTabChange: (tab: 'sql' | 'ts') => void;
+  readonly activeTab: PreviewTab;
+  readonly onTabChange: (tab: PreviewTab) => void;
 }
 
-function SchemaPreview({ schema, activeTab, onTabChange }: SchemaPreviewProps) {
-  const code = useMemo(
-    () => (activeTab === 'sql' ? schemaToSql(schema) : schemaToTypeScript(schema)),
-    [schema, activeTab],
-  );
-
+function SchemaDetailPanel({ schema, activeTab, onTabChange }: SchemaDetailPanelProps) {
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+      {/* Tab Bar */}
       <div className="flex items-center gap-0 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+        <button
+          onClick={() => onTabChange('table')}
+          className={`px-4 py-2 text-xs font-medium transition-colors ${
+            activeTab === 'table'
+              ? 'text-brand-600 bg-white dark:bg-gray-800 dark:text-brand-400 border-b-2 border-brand-500'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+          }`}
+        >
+          테이블 편집
+        </button>
         <button
           onClick={() => onTabChange('sql')}
           className={`px-4 py-2 text-xs font-medium transition-colors ${
@@ -193,11 +206,35 @@ function SchemaPreview({ schema, activeTab, onTabChange }: SchemaPreviewProps) {
         >
           TypeScript
         </button>
-        <div className="flex-1" />
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'table' ? (
+        <SchemaTableEditor schema={schema} />
+      ) : (
+        <SchemaCodePreview schema={schema} activeTab={activeTab} />
+      )}
+    </div>
+  );
+}
+
+interface SchemaCodePreviewProps {
+  readonly schema: DataSchema;
+  readonly activeTab: 'sql' | 'ts';
+}
+
+function SchemaCodePreview({ schema, activeTab }: SchemaCodePreviewProps) {
+  const code = useMemo(
+    () => (activeTab === 'sql' ? schemaToSql(schema) : schemaToTypeScript(schema)),
+    [schema, activeTab],
+  );
+
+  return (
+    <div>
+      <div className="flex items-center justify-end px-4 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
         <Button
           variant="ghost"
           size="sm"
-          className="mr-2"
           onClick={() => navigator.clipboard.writeText(code)}
         >
           복사

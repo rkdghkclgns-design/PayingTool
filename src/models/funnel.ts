@@ -10,7 +10,7 @@ export type FunnelStageName =
 
 export interface FunnelStage {
   readonly id: string;
-  readonly name: FunnelStageName;
+  readonly name: FunnelStageName | string;
   readonly label: string;
   readonly order: number;
   readonly conversionRate: number;

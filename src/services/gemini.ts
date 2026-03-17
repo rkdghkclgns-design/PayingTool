@@ -8,18 +8,13 @@ import {
   PRODUCT_RECOMMENDATION_PROMPT,
   SCHEMA_GENERATION_PROMPT,
   FUNNEL_STRATEGY_PROMPT,
+  PRODUCT_MIX_PROMPT,
 } from './gemini-prompts';
 
-const getApiKey = (): string => {
-  const key = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!key || key === 'your_gemini_api_key_here') {
-    throw new Error('Gemini API 키가 설정되지 않았습니다. .env.local 파일에 VITE_GEMINI_API_KEY를 설정하세요.');
-  }
-  return key;
-};
+const API_KEY = 'AIzaSyB7_sKZYkNCsQ17bcRG-ncIqmevTtAxnY0';
 
 const createClient = () => {
-  const genAI = new GoogleGenerativeAI(getApiKey());
+  const genAI = new GoogleGenerativeAI(API_KEY);
   return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 };
 
@@ -94,6 +89,30 @@ export const generateSchemas = async (products: Product[]): Promise<DataSchema[]
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     return parseJsonResponse<DataSchema[]>(text);
+  });
+};
+
+export interface ProductMixRecommendation {
+  readonly type: string;
+  readonly label: string;
+  readonly percentage: number;
+  readonly rationale: string;
+}
+
+interface ProductMixResponse {
+  readonly mix: readonly ProductMixRecommendation[];
+}
+
+export const recommendProductMix = async (
+  structure: GameStructure
+): Promise<readonly ProductMixRecommendation[]> => {
+  return retryWithBackoff(async () => {
+    const model = createClient();
+    const prompt = PRODUCT_MIX_PROMPT.replace('{{GAME_STRUCTURE}}', JSON.stringify(structure, null, 2));
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    const parsed = parseJsonResponse<ProductMixResponse>(text);
+    return parsed.mix;
   });
 };
 
