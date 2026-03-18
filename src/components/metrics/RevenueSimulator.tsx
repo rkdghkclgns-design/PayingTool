@@ -53,10 +53,17 @@ function MetricSlider({ label, value, min, max, step, suffix = '', prefix = '', 
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
 
+  // 원화 표시 여부 (USD 단위인 경우 원화로 표시)
+  const isUsdField = unit === 'USD';
+
   // 표시용 값 계산
   const displayValue = (() => {
     if (suffix === '%' && value < 1) {
       return `${(value * 100).toFixed(1)}%`;
+    }
+    if (isUsdField) {
+      const krwValue = Math.round(value * KRW_USD_RATE);
+      return `₩${formatNumber(krwValue)} ($${value.toFixed(2)})`;
     }
     return `${prefix}${formatNumber(value)}${suffix}`;
   })();
@@ -64,6 +71,9 @@ function MetricSlider({ label, value, min, max, step, suffix = '', prefix = '', 
   const handleEditStart = () => {
     if (suffix === '%' && value < 1) {
       setEditValue((value * 100).toFixed(1));
+    } else if (isUsdField) {
+      // 원화로 입력
+      setEditValue(String(Math.round(value * KRW_USD_RATE)));
     } else {
       setEditValue(String(value));
     }
@@ -80,6 +90,11 @@ function MetricSlider({ label, value, min, max, step, suffix = '', prefix = '', 
       parsed = parsed / 100;
     }
 
+    // 원화 입력 → USD 변환
+    if (isUsdField) {
+      parsed = parsed / KRW_USD_RATE;
+    }
+
     // 범위 제한
     const clamped = Math.min(max, Math.max(min, parsed));
     onChange(clamped);
@@ -90,7 +105,7 @@ function MetricSlider({ label, value, min, max, step, suffix = '', prefix = '', 
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-1.5">
           <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>
-          {unit && <span className="text-[10px] text-gray-400 dark:text-gray-500">({unit})</span>}
+          {unit && <span className="text-[10px] text-gray-400 dark:text-gray-500">({isUsdField ? 'KRW' : unit})</span>}
           {achieved !== undefined && (
             <Badge variant={achieved ? 'success' : 'danger'} size="sm">
               {achieved ? '달성' : '미달성'}
@@ -334,7 +349,87 @@ export default function RevenueSimulator() {
 
       {/* 손익분기점 + KPI N배 달성 기준 */}
       <BreakevenAndKpiGoals config={config} simulation={simulation} />
+
+      {/* 손익분기점 계산기 */}
+      <BreakevenCalculator />
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 손익분기점 계산기
+// ─────────────────────────────────────────────
+function BreakevenCalculator() {
+  const [calcCpi, setCalcCpi] = useState('270');
+  const [calcArpdau, setCalcArpdau] = useState('80');
+  const [calcDau, setCalcDau] = useState('100000');
+  const [calcCommission, setCalcCommission] = useState('30');
+
+  const cpiKrw = parseFloat(calcCpi) || 0;
+  const arpdauKrw = parseFloat(calcArpdau) || 0;
+  const dau = parseInt(calcDau, 10) || 0;
+  const commission = parseFloat(calcCommission) || 0;
+
+  const cpiUsd = cpiKrw / KRW_USD_RATE;
+  const arpdauUsd = arpdauKrw / KRW_USD_RATE;
+
+  const totalAcqCost = dau * cpiUsd;
+  const dailyGross = dau * arpdauUsd;
+  const dailyNet = dailyGross * (1 - commission / 100);
+  const breakDays = dailyNet > 0 ? Math.ceil(totalAcqCost / dailyNet) : Infinity;
+  const annualGross = dailyGross * 365;
+  const annualNet = annualGross * (1 - commission / 100);
+  const roi = totalAcqCost > 0 ? ((annualNet - totalAcqCost) / totalAcqCost * 100).toFixed(1) : '0';
+
+  return (
+    <Card title="손익분기점 계산기" subtitle="원화 기준으로 직접 입력하여 손익분기를 시뮬레이션합니다">
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div>
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">CPI (원)</label>
+            <input type="number" value={calcCpi} onChange={(e) => setCalcCpi(e.target.value)}
+              className="w-full text-sm font-semibold px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="270" />
+            <span className="text-[10px] text-gray-400 mt-0.5 block">{formatPrice(cpiKrw, cpiUsd)}</span>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">ARPDAU (원)</label>
+            <input type="number" value={calcArpdau} onChange={(e) => setCalcArpdau(e.target.value)}
+              className="w-full text-sm font-semibold px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="80" />
+            <span className="text-[10px] text-gray-400 mt-0.5 block">{formatPrice(arpdauKrw, arpdauUsd)}</span>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">DAU (명)</label>
+            <input type="number" value={calcDau} onChange={(e) => setCalcDau(e.target.value)}
+              className="w-full text-sm font-semibold px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="100000" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">수수료 (%)</label>
+            <input type="number" value={calcCommission} onChange={(e) => setCalcCommission(e.target.value)}
+              className="w-full text-sm font-semibold px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="30" min={0} max={100} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-900">
+            <span className="text-[10px] text-red-600 dark:text-red-400 block">총 유저 획득 비용</span>
+            <span className="text-sm font-bold text-red-700 dark:text-red-300">{formatPrice(Math.round(totalAcqCost * KRW_USD_RATE), totalAcqCost)}</span>
+          </div>
+          <div className={`p-3 rounded-lg border ${breakDays <= 365 ? 'bg-green-50 dark:bg-green-950 border-green-100 dark:border-green-900' : 'bg-amber-50 dark:bg-amber-950 border-amber-100 dark:border-amber-900'}`}>
+            <span className={`text-[10px] block ${breakDays <= 365 ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>손익분기 소요일</span>
+            <span className={`text-sm font-bold ${breakDays <= 365 ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+              {breakDays === Infinity ? '∞' : `${breakDays}일 (${(breakDays / 30).toFixed(1)}개월)`}
+            </span>
+          </div>
+          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-100 dark:border-blue-900">
+            <span className="text-[10px] text-blue-600 dark:text-blue-400 block">연간 순익</span>
+            <span className="text-sm font-bold text-blue-700 dark:text-blue-300">{formatPrice(Math.round(annualNet * KRW_USD_RATE), annualNet)}</span>
+          </div>
+          <div className={`p-3 rounded-lg border ${Number(roi) > 0 ? 'bg-green-50 dark:bg-green-950 border-green-100 dark:border-green-900' : 'bg-red-50 dark:bg-red-950 border-red-100 dark:border-red-900'}`}>
+            <span className={`text-[10px] block ${Number(roi) > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>ROI</span>
+            <span className={`text-sm font-bold ${Number(roi) > 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>{roi}%</span>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -422,7 +517,7 @@ function BreakevenAndKpiGoals({ config, simulation }: BreakevenProps) {
             <div className="grid grid-cols-1 gap-2">
               <div className="flex justify-between items-center p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-100 dark:border-blue-900">
                 <span className="text-xs text-blue-700 dark:text-blue-300">최소 ARPDAU</span>
-                <span className="text-sm font-bold text-blue-800 dark:text-blue-200">${minArpdauForBreakeven}</span>
+                <span className="text-sm font-bold text-blue-800 dark:text-blue-200">{formatPrice(Math.round(Number(minArpdauForBreakeven) * KRW_USD_RATE), Number(minArpdauForBreakeven))}</span>
               </div>
               <div className="flex justify-between items-center p-2.5 rounded-lg bg-purple-50 dark:bg-purple-950 border border-purple-100 dark:border-purple-900">
                 <span className="text-xs text-purple-700 dark:text-purple-300">최소 과금 전환율</span>
@@ -491,7 +586,7 @@ function BreakevenAndKpiGoals({ config, simulation }: BreakevenProps) {
             <div className="grid grid-cols-1 gap-2">
               <div className="flex justify-between items-center p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-100 dark:border-blue-900">
                 <span className="text-xs text-blue-700 dark:text-blue-300">필요 ARPDAU</span>
-                <span className="text-sm font-bold text-blue-800 dark:text-blue-200">${requiredArpdauForMultiple}</span>
+                <span className="text-sm font-bold text-blue-800 dark:text-blue-200">{formatPrice(Math.round(Number(requiredArpdauForMultiple) * KRW_USD_RATE), Number(requiredArpdauForMultiple))}</span>
               </div>
               <div className="flex justify-between items-center p-2.5 rounded-lg bg-purple-50 dark:bg-purple-950 border border-purple-100 dark:border-purple-900">
                 <span className="text-xs text-purple-700 dark:text-purple-300">필요 과금 전환율</span>
