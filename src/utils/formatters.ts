@@ -34,6 +34,16 @@ export function formatNumber(value: number): string {
 }
 
 /**
+ * Format price as "원화(달러)" combined format.
+ * Example: formatPrice(1350, 0.99) -> "₩1,350 ($0.99)"
+ * If KRW is 0 and USD is 0, returns "무료"
+ */
+export function formatPrice(krw: number, usd: number): string {
+  if (krw === 0 && usd === 0) return '무료';
+  return `${formatKRW(krw)} (${formatUSD(usd)})`;
+}
+
+/**
  * Format a number in compact notation.
  * Examples: 1200 -> "1.2K", 1500000 -> "1.5M", 2000000000 -> "2.0B"
  */

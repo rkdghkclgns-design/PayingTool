@@ -12,7 +12,7 @@ import {
   RETENTION_STAGE_LABELS,
   GAME_GENRE_LABELS,
 } from './constants';
-import { formatKRW, formatUSD, formatPercent, formatNumber } from './formatters';
+import { formatPrice, formatUSD, formatPercent, formatNumber } from './formatters';
 import { buildErDiagram, getTableColor, HEADER_HEIGHT, FIELD_HEIGHT } from './er-diagram-utils';
 
 /**
@@ -180,8 +180,7 @@ function buildProductsSection(products: readonly Product[]): string {
           <td>${PRODUCT_CATEGORY_LABELS.get(p.category) ?? p.category}</td>
           <td>${p.targetSegments.map((s) => USER_SEGMENT_LABELS.get(s) ?? s).join(', ')}</td>
           <td>${RETENTION_STAGE_LABELS.get(p.targetRetentionStage) ?? p.targetRetentionStage}</td>
-          <td class="text-right">${formatUSD(p.priceUSD)}</td>
-          <td class="text-right">${formatKRW(p.priceKRW)}</td>
+          <td class="text-right">${formatPrice(p.priceKRW, p.priceUSD)}</td>
           <td>${p.purchaseLimit.type === 'unlimited' ? '무제한' : `${p.purchaseLimit.type}(${p.purchaseLimit.maxCount}회)`}</td>
           <td>${p.isActive ? '활성' : '비활성'}</td>
         </tr>`,
@@ -197,7 +196,7 @@ function buildProductsSection(products: readonly Product[]): string {
           <thead>
             <tr>
               <th>상품명</th><th>카테고리</th><th>타겟 세그먼트</th>
-              <th>리텐션 단계</th><th>USD</th><th>KRW</th>
+              <th>리텐션 단계</th><th>가격</th>
               <th>구매 제한</th><th>상태</th>
             </tr>
           </thead>

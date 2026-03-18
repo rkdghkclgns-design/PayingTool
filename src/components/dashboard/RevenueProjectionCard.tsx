@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { TrendingUp, DollarSign, Calendar, Zap } from 'lucide-react';
 import { useMetricsStore } from '../../stores/metrics-store';
 import { simulateRevenue } from '../../utils/revenue-calculator';
-import { formatUSD, formatCompactNumber } from '../../utils/formatters';
+import { formatPrice, formatCompactNumber } from '../../utils/formatters';
+import { KRW_USD_RATE } from '../../utils/constants';
 import Card from '../ui/Card';
 
 export default function RevenueProjectionCard() {
@@ -14,12 +15,12 @@ export default function RevenueProjectionCard() {
     {
       icon: <DollarSign className="w-4 h-4 text-green-500" />,
       label: '12개월 예상 수익',
-      value: formatUSD(simulation.totalRevenue),
+      value: formatPrice(Math.round(simulation.totalRevenue * KRW_USD_RATE), simulation.totalRevenue),
     },
     {
       icon: <TrendingUp className="w-4 h-4 text-blue-500" />,
       label: 'LTV',
-      value: formatUSD(simulation.ltv),
+      value: formatPrice(Math.round(simulation.ltv * KRW_USD_RATE), simulation.ltv),
     },
     {
       icon: <Calendar className="w-4 h-4 text-purple-500" />,

@@ -14,7 +14,8 @@ import { DollarSign, TrendingUp, Calendar, RotateCcw } from 'lucide-react';
 import type { MetricsConfig } from '../../models';
 import { useMetricsStore } from '../../stores/metrics-store';
 import { simulateRevenue } from '../../utils/revenue-calculator';
-import { formatCompactNumber, formatUSD, formatNumber } from '../../utils/formatters';
+import { formatCompactNumber, formatUSD, formatNumber, formatPrice } from '../../utils/formatters';
+import { KRW_USD_RATE } from '../../utils/constants';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
@@ -241,8 +242,8 @@ export default function RevenueSimulator() {
         <div className="lg:col-span-2 flex flex-col gap-6">
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <SummaryCard icon={<DollarSign className="w-4 h-4" />} label="12개월 총 수익" value={formatUSD(simulation.totalRevenue)} />
-            <SummaryCard icon={<TrendingUp className="w-4 h-4" />} label="LTV" value={formatUSD(simulation.ltv)} />
+            <SummaryCard icon={<DollarSign className="w-4 h-4" />} label="12개월 총 수익" value={formatPrice(Math.round(simulation.totalRevenue * KRW_USD_RATE), simulation.totalRevenue)} />
+            <SummaryCard icon={<TrendingUp className="w-4 h-4" />} label="LTV" value={formatPrice(Math.round(simulation.ltv * KRW_USD_RATE), simulation.ltv)} />
             <SummaryCard icon={<Calendar className="w-4 h-4" />} label="페이백 시점" value={simulation.paybackMonth ? `M${simulation.paybackMonth}` : '미달성'} />
             <SummaryCard icon={<DollarSign className="w-4 h-4" />} label="피크 수익" value={`${formatCompactNumber(simulation.peakRevenue)} (M${simulation.peakMonth})`} />
           </div>
@@ -354,11 +355,11 @@ function BreakevenAndKpiGoals({ config, simulation }: BreakevenProps) {
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
                 <span className="text-gray-500">총 유저 획득 비용</span>
-                <p className="font-bold text-gray-900 dark:text-gray-100 mt-0.5">{formatUSD(totalAcquisitionCost)}</p>
+                <p className="font-bold text-gray-900 dark:text-gray-100 mt-0.5">{formatPrice(Math.round(totalAcquisitionCost * KRW_USD_RATE), totalAcquisitionCost)}</p>
               </div>
               <div>
                 <span className="text-gray-500">일 수익</span>
-                <p className="font-bold text-gray-900 dark:text-gray-100 mt-0.5">{formatUSD(dailyRevenue)}</p>
+                <p className="font-bold text-gray-900 dark:text-gray-100 mt-0.5">{formatPrice(Math.round(dailyRevenue * KRW_USD_RATE), dailyRevenue)}</p>
               </div>
               <div>
                 <span className="text-gray-500">손익분기 소요일</span>
@@ -366,7 +367,7 @@ function BreakevenAndKpiGoals({ config, simulation }: BreakevenProps) {
               </div>
               <div>
                 <span className="text-gray-500">12개월 총 수익</span>
-                <p className="font-bold text-gray-900 dark:text-gray-100 mt-0.5">{formatUSD(simulation.totalRevenue)}</p>
+                <p className="font-bold text-gray-900 dark:text-gray-100 mt-0.5">{formatPrice(Math.round(simulation.totalRevenue * KRW_USD_RATE), simulation.totalRevenue)}</p>
               </div>
             </div>
           </div>
@@ -419,15 +420,15 @@ function BreakevenAndKpiGoals({ config, simulation }: BreakevenProps) {
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
                 <span className="text-amber-700 dark:text-amber-300">기준 (획득비용)</span>
-                <p className="font-bold text-amber-900 dark:text-amber-100 mt-0.5">{formatUSD(totalAcquisitionCost)}</p>
+                <p className="font-bold text-amber-900 dark:text-amber-100 mt-0.5">{formatPrice(Math.round(totalAcquisitionCost * KRW_USD_RATE), totalAcquisitionCost)}</p>
               </div>
               <div>
                 <span className="text-amber-700 dark:text-amber-300">목표 수익 ({kpiMultiplier}배)</span>
-                <p className="font-bold text-amber-900 dark:text-amber-100 mt-0.5">{formatUSD(targetRevenueMultiplied)}</p>
+                <p className="font-bold text-amber-900 dark:text-amber-100 mt-0.5">{formatPrice(Math.round(targetRevenueMultiplied * KRW_USD_RATE), targetRevenueMultiplied)}</p>
               </div>
               <div>
                 <span className="text-amber-700 dark:text-amber-300">현재 12개월 수익</span>
-                <p className="font-bold text-amber-900 dark:text-amber-100 mt-0.5">{formatUSD(simulation.totalRevenue)}</p>
+                <p className="font-bold text-amber-900 dark:text-amber-100 mt-0.5">{formatPrice(Math.round(simulation.totalRevenue * KRW_USD_RATE), simulation.totalRevenue)}</p>
               </div>
               <div>
                 <span className="text-amber-700 dark:text-amber-300">달성률</span>

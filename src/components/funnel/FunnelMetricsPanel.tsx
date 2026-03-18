@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { TrendingDown, DollarSign, AlertTriangle, Users } from 'lucide-react';
 import type { FunnelStage, Product } from '../../models';
-import { formatPercent, formatUSD, formatCompactNumber } from '../../utils/formatters';
+import { formatPercent, formatPrice, formatCompactNumber } from '../../utils/formatters';
+import { KRW_USD_RATE } from '../../utils/constants';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 
@@ -81,7 +82,7 @@ export default function FunnelMetricsPanel({ stages, totalUsers, allProducts }: 
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">총 예상 수익</p>
               <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                {formatUSD(metrics.totalRevenue)}
+                {formatPrice(Math.round(metrics.totalRevenue * KRW_USD_RATE), metrics.totalRevenue)}
               </p>
             </div>
           </div>
@@ -133,7 +134,7 @@ export default function FunnelMetricsPanel({ stages, totalUsers, allProducts }: 
               <div className="flex items-center gap-3 flex-shrink-0">
                 <span className="text-xs text-gray-500 dark:text-gray-400">{formatCompactNumber(sm.userCount)}명</span>
                 <Badge variant={sm.revenue > 0 ? 'success' : 'default'} size="sm">
-                  {formatUSD(sm.revenue)}
+                  {formatPrice(Math.round(sm.revenue * KRW_USD_RATE), sm.revenue)}
                 </Badge>
               </div>
             </div>

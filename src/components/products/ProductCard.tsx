@@ -1,7 +1,7 @@
 import { Pencil, Trash2, Package } from 'lucide-react';
 import type { Product } from '../../models';
 import { PRODUCT_CATEGORY_LABELS, RETENTION_STAGE_LABELS, SALES_TECHNIQUE_LABELS } from '../../utils/constants';
-import { formatKRW, formatUSD } from '../../utils/formatters';
+import { formatPrice } from '../../utils/formatters';
 import Badge from '../ui/Badge';
 
 interface ProductCardProps {
@@ -86,12 +86,9 @@ export default function ProductCard({ product, onEdit, onDelete }: ProductCardPr
       </div>
 
       {/* Price */}
-      <div className="flex items-baseline gap-2 mb-3">
+      <div className="mb-3">
         <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-          {formatUSD(product.priceUSD)}
-        </span>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          ({formatKRW(product.priceKRW)})
+          {formatPrice(product.priceKRW, product.priceUSD)}
         </span>
       </div>
 

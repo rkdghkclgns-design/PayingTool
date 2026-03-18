@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Package, Plus, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import type { FunnelStage, Product } from '../../models';
-import { formatPercent, formatNumber, formatUSD } from '../../utils/formatters';
+import { formatPercent, formatNumber, formatPrice } from '../../utils/formatters';
+import { KRW_USD_RATE } from '../../utils/constants';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 
@@ -258,7 +259,7 @@ export default function FunnelStageCard({
             )}
             <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
               <span>예상 수익 기여:</span>
-              <span className="font-semibold text-green-600 dark:text-green-400">{formatUSD(stageRevenue)}</span>
+              <span className="font-semibold text-green-600 dark:text-green-400">{formatPrice(Math.round(stageRevenue * KRW_USD_RATE), stageRevenue)}</span>
             </div>
             {assignedProducts.length > 3 && (
               <div className="flex flex-wrap gap-1.5">

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Package, Check, Search } from 'lucide-react';
 import type { Product, FunnelStage } from '../../models';
 import { PRODUCT_CATEGORY_LABELS } from '../../utils/constants';
-import { formatUSD } from '../../utils/formatters';
+import { formatPrice } from '../../utils/formatters';
 import Modal from '../ui/Modal';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
@@ -94,7 +94,7 @@ export default function ProductAssignModal({
                       {product.name}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {PRODUCT_CATEGORY_LABELS.get(product.category)} | {formatUSD(product.priceUSD)}
+                      {PRODUCT_CATEGORY_LABELS.get(product.category)} | {formatPrice(product.priceKRW, product.priceUSD)}
                     </span>
                   </div>
                   <Badge variant={isAssigned ? 'primary' : 'default'} size="sm">
