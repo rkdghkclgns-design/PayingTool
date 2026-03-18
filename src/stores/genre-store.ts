@@ -14,7 +14,7 @@ interface GenreActions {
 type GenreStore = GenreState & GenreActions;
 
 const initialState: GenreState = {
-  selectedGenre: null,
+  selectedGenre: 'idle',
   genreSource: 'manual',
 };
 

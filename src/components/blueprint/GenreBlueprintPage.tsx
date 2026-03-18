@@ -11,14 +11,13 @@ import {
   Spade,
   Shield,
   Globe,
-  Info,
   Sparkles,
   CheckCircle2,
 } from 'lucide-react';
 import type { GenreBlueprint } from '../../models/genre-blueprint';
 import type { GameGenre } from '../../models/project';
 import { GENRE_BLUEPRINTS } from '../../data/genre-blueprints';
-import { useMindmapStore } from '../../stores/mindmap-store';
+// useMindmapStore는 AI 감지 장르 제거로 더 이상 불필요
 import { useGenreStore } from '../../stores/genre-store';
 import PageContainer from '../layout/PageContainer';
 import Badge from '../ui/Badge';
@@ -135,8 +134,7 @@ export default function GenreBlueprintPage() {
   const setGenre = useGenreStore((s) => s.setGenre);
   const clearGenre = useGenreStore((s) => s.clearGenre);
 
-  const analysisResult = useMindmapStore((s) => s.analysisResult);
-  const detectedGenre = analysisResult?.genre ?? null;
+  // AI 감지 장르는 사용하지 않음 — 사용자가 지정한 장르만 유지
 
   // Find the selected blueprint from global genre store
   const selectedBlueprint = useMemo(
@@ -144,18 +142,14 @@ export default function GenreBlueprintPage() {
     [globalGenre],
   );
 
-  // Sort blueprints: detected genre first, then global genre, rest in original order
+  // Sort blueprints: selected genre first, rest in original order (AI 감지 장르는 무시)
   const sortedBlueprints = useMemo(() => {
-    const priorityGenres = new Set<string>();
-    if (detectedGenre) priorityGenres.add(detectedGenre);
-    if (globalGenre && globalGenre !== detectedGenre) priorityGenres.add(globalGenre);
+    if (!globalGenre) return GENRE_BLUEPRINTS;
 
-    if (priorityGenres.size === 0) return GENRE_BLUEPRINTS;
-
-    const prioritized = GENRE_BLUEPRINTS.filter((bp) => priorityGenres.has(bp.genre));
-    const rest = GENRE_BLUEPRINTS.filter((bp) => !priorityGenres.has(bp.genre));
-    return [...prioritized, ...rest];
-  }, [detectedGenre, globalGenre]);
+    const selected = GENRE_BLUEPRINTS.filter((bp) => bp.genre === globalGenre);
+    const rest = GENRE_BLUEPRINTS.filter((bp) => bp.genre !== globalGenre);
+    return [...selected, ...rest];
+  }, [globalGenre]);
 
   const handleSelect = useCallback((blueprint: GenreBlueprint) => {
     if (globalGenre === blueprint.genre) {
@@ -172,15 +166,7 @@ export default function GenreBlueprintPage() {
       exportId="page-blueprint"
       exportName="장르설계도"
     >
-      {/* Info Banner when no analysis */}
-      {!analysisResult && !globalGenre && (
-        <div className="flex items-center gap-2 px-4 py-3 mb-6 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950 dark:border-blue-800">
-          <Info className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
-          <p className="text-sm text-blue-700 dark:text-blue-300">
-            장르를 선택하면 상품 설계, 퍼널, 지표 등 모든 메뉴에 기준으로 적용됩니다. 마인드맵을 분석하면 장르가 자동 감지됩니다.
-          </p>
-        </div>
-      )}
+      {/* Info Banner — 장르는 사용자가 직접 선택 (기본: 방치형/아이들) */}
 
       {/* Currently selected genre banner */}
       {globalGenre && selectedBlueprint && (
@@ -199,7 +185,7 @@ export default function GenreBlueprintPage() {
             key={bp.id}
             blueprint={bp}
             isSelected={globalGenre === bp.genre}
-            isDetected={bp.genre === detectedGenre}
+            isDetected={false}
             isGlobalGenre={globalGenre === bp.genre}
             onSelect={() => handleSelect(bp)}
           />

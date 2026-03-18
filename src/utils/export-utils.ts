@@ -222,7 +222,43 @@ function buildFunnelSection(
       </section>`;
   }
 
-  const stageRows = stages
+  const FUNNEL_COLORS = ['#6366f1', '#818cf8', '#a78bfa', '#c4b5fd', '#ddd6fe', '#e0e7ff', '#eef2ff', '#f5f3ff'];
+  const sortedStages = [...stages].sort((a, b) => a.order - b.order);
+  const maxRate = Math.max(...sortedStages.map((s) => s.conversionRate), 1);
+
+  const funnelCards = sortedStages
+    .map((stage, idx) => {
+      const assignedProducts = products.filter((p) =>
+        stage.assignedProductIds.includes(p.id),
+      );
+      const productTags = assignedProducts.length > 0
+        ? assignedProducts.map((p) => `<span class="funnel-product-tag">${p.name}</span>`).join(' ')
+        : '<span class="funnel-no-product">배치 상품 없음</span>';
+
+      const widthPct = Math.max(30, Math.round((stage.conversionRate / maxRate) * 100));
+      const color = FUNNEL_COLORS[idx % FUNNEL_COLORS.length];
+      const rateDisplay = stage.conversionRate < 1
+        ? `${(stage.conversionRate * 100).toFixed(1)}%`
+        : `${stage.conversionRate.toFixed(1)}%`;
+
+      return `
+        <div class="funnel-stage">
+          <div class="funnel-bar-container">
+            <div class="funnel-bar" style="width: ${widthPct}%; background: ${color};">
+              <span class="funnel-label">${stage.label}</span>
+              <span class="funnel-rate">${rateDisplay}</span>
+            </div>
+          </div>
+          <div class="funnel-details">
+            ${stage.description ? `<p class="funnel-desc">${stage.description}</p>` : ''}
+            <div class="funnel-products">${productTags}</div>
+          </div>
+        </div>`;
+    })
+    .join('');
+
+  // 테이블도 함께 제공
+  const stageRows = sortedStages
     .map((stage) => {
       const assignedProducts = products.filter((p) =>
         stage.assignedProductIds.includes(p.id),
@@ -231,12 +267,15 @@ function buildFunnelSection(
         assignedProducts.length > 0
           ? assignedProducts.map((p) => p.name).join(', ')
           : '-';
+      const rateDisplay = stage.conversionRate < 1
+        ? `${(stage.conversionRate * 100).toFixed(1)}%`
+        : `${stage.conversionRate.toFixed(1)}%`;
 
       return `
         <tr>
           <td>${stage.order + 1}</td>
           <td>${stage.label}</td>
-          <td class="text-right">${formatPercent(stage.conversionRate)}</td>
+          <td class="text-right">${rateDisplay}</td>
           <td>${stage.description || '-'}</td>
           <td>${productNames}</td>
         </tr>`;
@@ -246,6 +285,10 @@ function buildFunnelSection(
   return `
     <section class="section">
       <h2>3. 퍼널 설계</h2>
+      <div class="funnel-visual">
+        ${funnelCards}
+      </div>
+      <h3 style="margin-top: 24px;">퍼널 상세 데이터</h3>
       <table>
         <thead>
           <tr><th>#</th><th>단계</th><th>전환율</th><th>설명</th><th>배치 상품</th></tr>
@@ -660,6 +703,24 @@ function buildReportStyles(): string {
       }
       .ad-reward { font-size: 12px; color: #b45309; margin-bottom: 4px; }
       .ad-desc { font-size: 12px; color: #6b7280; line-height: 1.6; }
+      .funnel-visual { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+      .funnel-stage { display: flex; flex-direction: column; gap: 4px; }
+      .funnel-bar-container { width: 100%; display: flex; justify-content: center; }
+      .funnel-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 10px 16px; border-radius: 6px; color: #fff; font-size: 13px;
+        min-height: 40px; transition: width 0.3s;
+      }
+      .funnel-label { font-weight: 600; }
+      .funnel-rate { font-weight: 700; font-size: 14px; }
+      .funnel-details { padding: 0 16px 8px; }
+      .funnel-desc { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+      .funnel-products { display: flex; flex-wrap: wrap; gap: 4px; }
+      .funnel-product-tag {
+        display: inline-block; padding: 2px 8px; border-radius: 4px;
+        font-size: 11px; background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe;
+      }
+      .funnel-no-product { font-size: 11px; color: #9ca3af; font-style: italic; }
       ul {
         list-style: none;
         padding-left: 0;
