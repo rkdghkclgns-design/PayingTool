@@ -222,79 +222,108 @@ function buildFunnelSection(
       </section>`;
   }
 
-  const FUNNEL_COLORS = ['#6366f1', '#818cf8', '#a78bfa', '#c4b5fd', '#ddd6fe', '#e0e7ff', '#eef2ff', '#f5f3ff'];
   const sortedStages = [...stages].sort((a, b) => a.order - b.order);
-  const maxRate = Math.max(...sortedStages.map((s) => s.conversionRate), 1);
+  const totalUsers = 100000;
 
+  // 유저 수 계산 (각 단계 전환율 적용)
+  const stageUsers = sortedStages.map((stage) => {
+    const rate = stage.conversionRate < 1 ? stage.conversionRate : stage.conversionRate / 100;
+    return Math.round(totalUsers * rate);
+  });
+
+  // 병목 구간: 전환율이 가장 낮은 단계
+  const minRateIdx = sortedStages.reduce((minIdx, stage, idx, arr) => {
+    const cur = stage.conversionRate < 1 ? stage.conversionRate : stage.conversionRate / 100;
+    const min = arr[minIdx].conversionRate < 1 ? arr[minIdx].conversionRate : arr[minIdx].conversionRate / 100;
+    return cur < min ? idx : minIdx;
+  }, 0);
+
+  // 총 전환율 (마지막 단계 / 첫 단계)
+  const firstRate = sortedStages[0]?.conversionRate ?? 1;
+  const lastRate = sortedStages[sortedStages.length - 1]?.conversionRate ?? 0;
+  const fR = firstRate < 1 ? firstRate : firstRate / 100;
+  const lR = lastRate < 1 ? lastRate : lastRate / 100;
+  const totalConversion = fR > 0 ? ((lR / fR) * 100).toFixed(2) : '0.00';
+
+  // 카드 생성
   const funnelCards = sortedStages
     .map((stage, idx) => {
       const assignedProducts = products.filter((p) =>
         stage.assignedProductIds.includes(p.id),
       );
       const productTags = assignedProducts.length > 0
-        ? assignedProducts.map((p) => `<span class="funnel-product-tag">${p.name}</span>`).join(' ')
-        : '<span class="funnel-no-product">배치 상품 없음</span>';
+        ? assignedProducts.map((p) => `<span class="fc-product-tag">${p.name}</span>`).join(' ')
+        : '<span class="fc-no-product">+ 상품 배치</span>';
 
-      const widthPct = Math.max(30, Math.round((stage.conversionRate / maxRate) * 100));
-      const color = FUNNEL_COLORS[idx % FUNNEL_COLORS.length];
-      const rateDisplay = stage.conversionRate < 1
-        ? `${(stage.conversionRate * 100).toFixed(1)}%`
-        : `${stage.conversionRate.toFixed(1)}%`;
+      const rate = stage.conversionRate < 1
+        ? `${(stage.conversionRate * 100).toFixed(2)}%`
+        : `${stage.conversionRate.toFixed(2)}%`;
+      const users = formatNumber(stageUsers[idx]);
+      const arrow = idx < sortedStages.length - 1 ? '<div class="fc-arrow">↓</div>' : '';
 
       return `
-        <div class="funnel-stage">
-          <div class="funnel-bar-container">
-            <div class="funnel-bar" style="width: ${widthPct}%; background: ${color};">
-              <span class="funnel-label">${stage.label}</span>
-              <span class="funnel-rate">${rateDisplay}</span>
-            </div>
+        <div class="fc-card">
+          <div class="fc-header">
+            <span class="fc-badge">${idx + 1}</span>
+            <span class="fc-title">${idx + 1}. ${stage.label}</span>
           </div>
-          <div class="funnel-details">
-            ${stage.description ? `<p class="funnel-desc">${stage.description}</p>` : ''}
-            <div class="funnel-products">${productTags}</div>
+          <div class="fc-stats">
+            <span>전환율: <strong>${rate}</strong></span>
+            <span>유저: <strong>${users}</strong></span>
           </div>
+          <div class="fc-products">${productTags}</div>
+        </div>
+        ${arrow}`;
+    })
+    .join('');
+
+  // 단계별 수익 (간략)
+  const revenueRows = sortedStages
+    .map((stage, idx) => {
+      const users = stageUsers[idx];
+      return `
+        <div class="fc-rev-row">
+          <span>${idx + 1}. ${stage.label}</span>
+          <span>${formatNumber(users)}명</span>
         </div>`;
     })
     .join('');
 
-  // 테이블도 함께 제공
-  const stageRows = sortedStages
-    .map((stage) => {
-      const assignedProducts = products.filter((p) =>
-        stage.assignedProductIds.includes(p.id),
-      );
-      const productNames =
-        assignedProducts.length > 0
-          ? assignedProducts.map((p) => p.name).join(', ')
-          : '-';
-      const rateDisplay = stage.conversionRate < 1
-        ? `${(stage.conversionRate * 100).toFixed(1)}%`
-        : `${stage.conversionRate.toFixed(1)}%`;
-
-      return `
-        <tr>
-          <td>${stage.order + 1}</td>
-          <td>${stage.label}</td>
-          <td class="text-right">${rateDisplay}</td>
-          <td>${stage.description || '-'}</td>
-          <td>${productNames}</td>
-        </tr>`;
-    })
-    .join('');
+  const bottleneck = sortedStages[minRateIdx];
+  const bnRate = bottleneck.conversionRate < 1
+    ? `${(bottleneck.conversionRate * 100).toFixed(2)}%`
+    : `${bottleneck.conversionRate.toFixed(2)}%`;
 
   return `
     <section class="section">
       <h2>3. 퍼널 설계</h2>
-      <div class="funnel-visual">
-        ${funnelCards}
+      <div class="fc-layout">
+        <div class="fc-left">
+          <div class="fc-total-users">총 유저 수: <strong>${formatNumber(totalUsers)}</strong></div>
+          ${funnelCards}
+        </div>
+        <div class="fc-right">
+          <div class="fc-summary-card">
+            <div class="fc-sum-item">
+              <span class="fc-sum-label">총 전환율</span>
+              <span class="fc-sum-value">${totalConversion}%</span>
+            </div>
+            <div class="fc-sum-item">
+              <span class="fc-sum-label">최종 단계 유저</span>
+              <span class="fc-sum-value">${formatNumber(stageUsers[stageUsers.length - 1])}</span>
+            </div>
+          </div>
+          <div class="fc-bottleneck">
+            <span class="fc-bn-label">병목 구간</span>
+            <span class="fc-bn-stage">${bottleneck.order + 1}. ${bottleneck.label}</span>
+            <span class="fc-bn-rate">전환율 ${bnRate}</span>
+          </div>
+          <div class="fc-revenue-panel">
+            <h4>단계별 유저</h4>
+            ${revenueRows}
+          </div>
+        </div>
       </div>
-      <h3 style="margin-top: 24px;">퍼널 상세 데이터</h3>
-      <table>
-        <thead>
-          <tr><th>#</th><th>단계</th><th>전환율</th><th>설명</th><th>배치 상품</th></tr>
-        </thead>
-        <tbody>${stageRows}</tbody>
-      </table>
     </section>`;
 }
 
@@ -703,24 +732,54 @@ function buildReportStyles(): string {
       }
       .ad-reward { font-size: 12px; color: #b45309; margin-bottom: 4px; }
       .ad-desc { font-size: 12px; color: #6b7280; line-height: 1.6; }
-      .funnel-visual { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
-      .funnel-stage { display: flex; flex-direction: column; gap: 4px; }
-      .funnel-bar-container { width: 100%; display: flex; justify-content: center; }
-      .funnel-bar {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 10px 16px; border-radius: 6px; color: #fff; font-size: 13px;
-        min-height: 40px; transition: width 0.3s;
+      .fc-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+      .fc-left { display: flex; flex-direction: column; align-items: center; }
+      .fc-total-users { font-size: 13px; color: #6b7280; margin-bottom: 12px; }
+      .fc-card {
+        width: 90%; max-width: 500px; padding: 16px; border-radius: 10px;
+        border: 1px solid #e5e7eb; background: #fff;
       }
-      .funnel-label { font-weight: 600; }
-      .funnel-rate { font-weight: 700; font-size: 14px; }
-      .funnel-details { padding: 0 16px 8px; }
-      .funnel-desc { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
-      .funnel-products { display: flex; flex-wrap: wrap; gap: 4px; }
-      .funnel-product-tag {
-        display: inline-block; padding: 2px 8px; border-radius: 4px;
+      .fc-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+      .fc-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 24px; height: 24px; border-radius: 6px;
+        background: #eef2ff; color: #4f46e5; font-size: 12px; font-weight: 700;
+      }
+      .fc-title { font-size: 14px; font-weight: 600; color: #1f2937; }
+      .fc-stats { display: flex; gap: 16px; font-size: 13px; color: #6b7280; margin-bottom: 8px; }
+      .fc-stats strong { color: #4f46e5; }
+      .fc-products { display: flex; flex-wrap: wrap; gap: 4px; }
+      .fc-product-tag {
+        display: inline-block; padding: 3px 8px; border-radius: 4px;
         font-size: 11px; background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe;
       }
-      .funnel-no-product { font-size: 11px; color: #9ca3af; font-style: italic; }
+      .fc-no-product { font-size: 12px; color: #9ca3af; }
+      .fc-arrow { text-align: center; color: #d1d5db; font-size: 18px; margin: 4px 0; }
+      .fc-right { display: flex; flex-direction: column; gap: 12px; }
+      .fc-summary-card {
+        padding: 16px; border-radius: 10px; border: 1px solid #e5e7eb; background: #fafbfc;
+      }
+      .fc-sum-item { display: flex; flex-direction: column; margin-bottom: 12px; }
+      .fc-sum-item:last-child { margin-bottom: 0; }
+      .fc-sum-label { font-size: 12px; color: #6b7280; }
+      .fc-sum-value { font-size: 20px; font-weight: 700; color: #1f2937; }
+      .fc-bottleneck {
+        padding: 12px; border-radius: 10px; border: 1px solid #fbbf24;
+        background: #fffbeb; display: flex; flex-direction: column; gap: 2px;
+      }
+      .fc-bn-label { font-size: 11px; color: #92400e; font-weight: 500; }
+      .fc-bn-stage { font-size: 14px; font-weight: 600; color: #92400e; }
+      .fc-bn-rate { font-size: 12px; color: #b45309; }
+      .fc-revenue-panel {
+        padding: 16px; border-radius: 10px; border: 1px solid #e5e7eb; background: #fafbfc;
+      }
+      .fc-revenue-panel h4 { font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 8px; }
+      .fc-rev-row {
+        display: flex; justify-content: space-between; padding: 4px 0;
+        font-size: 12px; color: #374151; border-bottom: 1px solid #f3f4f6;
+      }
+      .fc-rev-row:last-child { border-bottom: none; }
+      @media print { .fc-layout { grid-template-columns: 1fr; } }
       ul {
         list-style: none;
         padding-left: 0;

@@ -27,7 +27,6 @@ type TabId = (typeof TABS)[number]['id'];
 function GenreBenchmarkPanel() {
   const selectedGenre = useGenreStore((s) => s.selectedGenre);
   const genreSource = useGenreStore((s) => s.genreSource);
-  const currentConfig = useMetricsStore((s) => s.config);
   const loadConfig = useMetricsStore((s) => s.loadConfig);
   const [applied, setApplied] = useState(false);
 
@@ -44,9 +43,11 @@ function GenreBenchmarkPanel() {
     if (!blueprint?.benchmarkKpis) return;
     const kpis = blueprint.benchmarkKpis;
 
-    // 한 번에 반영 — 개별 updateMetric 12회 호출 대신 loadConfig 1회로 안정적 반영
+    // getState()로 최신 config를 가져와서 stale closure 방지
+    const freshConfig = useMetricsStore.getState().config;
+
     loadConfig({
-      ...currentConfig,
+      ...freshConfig,
       // 현재 지표: median 기반
       conversionRate: kpis.conversionRate.median / 100,
       arpdau: kpis.arpdau.median,
@@ -62,7 +63,7 @@ function GenreBenchmarkPanel() {
       targetArpu: kpis.arpdau.high,
       targetLtv: Math.round(kpis.arpdau.high * 30 * 100) / 100,
     });
-  }, [blueprint, currentConfig, loadConfig]);
+  }, [blueprint, loadConfig]);
 
   // 장르 변경 시 자동으로 KPI 벤치마크 적용
   const prevGenreRef = useRef<string | null>(null);
