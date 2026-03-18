@@ -102,6 +102,27 @@
   - 새 API 키 발급 시: 1) Dashboard에서 Secret 설정 → 2) Edge Function 재배포 순서 준수
   - Edge Function 재배포: deploy_edge_function MCP 도구 사용
 
+## [문제 12] 퍼널 AI conversionRate 단위 오류
+- 발생일: v6.1~v6.4
+- 증상: AI 퍼널 추천 후 전환율이 100%, 80% 등 비정상
+- 원인: AI가 퍼센트 정수(80)로 반환하지만 스토어는 소수(0.8) 사용
+- 해결: rawRate > 1이면 /100 변환 추가
+- 재발 방지: AI 반환값은 항상 단위 변환 필요 여부 확인
+
+## [문제 13] KPI 벤치마크 첫 로드 시 미적용
+- 발생일: v5.5
+- 증상: 페이지 첫 로드 시 장르가 이미 선택된 상태이면 벤치마크 미적용
+- 원인: prevGenreRef 초기값이 selectedGenre여서 변경 감지 안 됨
+- 해결: prevGenreRef 초기값을 null로 변경
+- 재발 방지: useRef로 이전값 비교 시 초기값은 항상 감지 가능한 값으로
+
+## [문제 14] 스키마 자동 생성이 템플릿과 동일
+- 발생일: v6.0 이전
+- 증상: "스키마 자동 생성"이 "템플릿 로드"와 거의 동일한 결과
+- 원인: 로컬 함수(generateSchemasFromProducts)가 정적 스키마 생성
+- 해결: AI 기반 generateSchemas() 호출로 변경 + 로컬 fallback
+- 재발 방지: "자동 생성"은 AI/동적이어야 함, "템플릿"은 정적
+
 ---
 
 ## 체크리스트 — 모든 변경 시 확인
