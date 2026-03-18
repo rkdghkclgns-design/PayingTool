@@ -143,15 +143,15 @@ const SLIDER_CONFIGS: readonly {
   readonly prefix?: string;
   readonly unit?: string;
 }[] = [
-  { key: 'dau', label: 'DAU', min: 100, max: 500000, step: 100, suffix: '', unit: '명' },
-  { key: 'mau', label: 'MAU', min: 1000, max: 5000000, step: 1000, suffix: '', unit: '명' },
-  { key: 'conversionRate', label: '과금 전환율', min: 0.001, max: 0.2, step: 0.001, suffix: '%' },
-  { key: 'arpdau', label: 'ARPDAU', min: 0.01, max: 2.0, step: 0.01, suffix: '', prefix: '$', unit: 'USD' },
-  { key: 'arppu', label: 'ARPPU', min: 1, max: 200, step: 0.5, suffix: '', prefix: '$', unit: 'USD' },
-  { key: 'cpi', label: 'CPI', min: 0.1, max: 20, step: 0.1, suffix: '', prefix: '$', unit: 'USD' },
-  { key: 'd1Retention', label: 'D1 리텐션', min: 0.05, max: 0.8, step: 0.01, suffix: '%' },
-  { key: 'd7Retention', label: 'D7 리텐션', min: 0.01, max: 0.5, step: 0.01, suffix: '%' },
-  { key: 'd30Retention', label: 'D30 리텐션', min: 0.005, max: 0.3, step: 0.005, suffix: '%' },
+  { key: 'dau', label: 'DAU', min: 100, max: 999999999, step: 100, suffix: '', unit: '명' },
+  { key: 'mau', label: 'MAU', min: 1000, max: 999999999, step: 1000, suffix: '', unit: '명' },
+  { key: 'conversionRate', label: '과금 전환율', min: 0.001, max: 0.5, step: 0.001, suffix: '%' },
+  { key: 'arpdau', label: 'ARPDAU', min: 0.01, max: 100.0, step: 0.01, suffix: '', prefix: '$', unit: 'USD' },
+  { key: 'arppu', label: 'ARPPU', min: 1, max: 10000, step: 0.5, suffix: '', prefix: '$', unit: 'USD' },
+  { key: 'cpi', label: 'CPI', min: 0.1, max: 200, step: 0.1, suffix: '', prefix: '$', unit: 'USD' },
+  { key: 'd1Retention', label: 'D1 리텐션', min: 0.05, max: 0.95, step: 0.01, suffix: '%' },
+  { key: 'd7Retention', label: 'D7 리텐션', min: 0.01, max: 0.8, step: 0.01, suffix: '%' },
+  { key: 'd30Retention', label: 'D30 리텐션', min: 0.005, max: 0.5, step: 0.005, suffix: '%' },
 ];
 
 // ─────────────────────────────────────────────
