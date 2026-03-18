@@ -25,7 +25,7 @@ export default function BlueprintProductMix({ productMix }: BlueprintProductMixP
   return (
     <Card title="상품 구성 비율" subtitle="추천 매출 비중 (%)">
       <div className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
           <PieChart>
             <Pie
               data={chartData}

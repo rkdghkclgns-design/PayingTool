@@ -308,7 +308,7 @@ export default function RevenueSimulator() {
           {/* Revenue Chart with Target LTV line */}
           <Card title="12개월 수익 프로젝션">
             <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />

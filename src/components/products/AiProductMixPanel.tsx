@@ -654,7 +654,7 @@ export default function AiProductMixPanel() {
           {/* Pie Chart with Legend (no inline labels to avoid clipping) */}
           <div className="flex justify-center">
             <div className="w-full max-w-lg" style={{ height: 380 }}>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                 <PieChart>
                   <Pie
                     data={pieData}

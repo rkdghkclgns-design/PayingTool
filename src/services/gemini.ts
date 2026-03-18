@@ -79,7 +79,7 @@ const toUserFriendlyError = (error: unknown): Error => {
     return new Error('API 키가 비활성화되었습니다. 관리자에게 문의해주세요.');
   }
   if (msg.includes('API_KEY_INVALID') || msg.includes('PERMISSION_DENIED') || msg.includes('403')) {
-    return new Error('API 키가 유효하지 않습니다. 관리자에게 문의해주세요.');
+    return new Error('API 키가 비활성화되었습니다. 관리자에게 문의해주세요.\n(Google AI Studio에서 새 키를 발급받아 Supabase Secrets에 등록이 필요합니다)');
   }
   if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
     return new Error('API 요청 한도를 초과했습니다. 1~2분 후 다시 시도해주세요.');

@@ -107,7 +107,7 @@ export default function SegmentTargetingPanel() {
       {/* Pie Chart */}
       <Card title="유저 세그먼트 분포" subtitle={`MAU 기준: ${formatNumber(config.mau)}명`}>
         <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
             <PieChart>
               <Pie
                 data={chartData}
