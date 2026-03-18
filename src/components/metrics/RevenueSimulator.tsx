@@ -14,7 +14,7 @@ import { DollarSign, TrendingUp, Calendar, RotateCcw } from 'lucide-react';
 import type { MetricsConfig } from '../../models';
 import { useMetricsStore } from '../../stores/metrics-store';
 import { simulateRevenue } from '../../utils/revenue-calculator';
-import { formatCompactNumber, formatUSD, formatNumber, formatPrice } from '../../utils/formatters';
+import { formatCompactNumber, formatNumber, formatPrice } from '../../utils/formatters';
 import { KRW_USD_RATE } from '../../utils/constants';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -183,16 +183,20 @@ export default function RevenueSimulator() {
   const config = useMetricsStore((s) => s.config);
   const updateMetric = useMetricsStore((s) => s.updateMetric);
   const resetConfig = useMetricsStore((s) => s.resetConfig);
+  const [commissionRate, setCommissionRate] = useState(30);
 
   const simulation = useMemo(() => simulateRevenue(config, 12), [config]);
+  const monthlyAvgRevenue = simulation.totalRevenue / 12;
+  const netRevenue = simulation.totalRevenue * (1 - commissionRate / 100);
 
   const chartData = useMemo(
     () =>
       simulation.monthlyProjections.map((p) => ({
-        name: p.label,
+        name: `${p.month}월`,
         revenue: p.revenue,
         cumulativeRevenue: p.cumulativeRevenue,
         dau: p.dau,
+        revenueKRW: Math.round(p.revenue * KRW_USD_RATE),
       })),
     [simulation],
   );
@@ -242,11 +246,49 @@ export default function RevenueSimulator() {
         <div className="lg:col-span-2 flex flex-col gap-6">
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <SummaryCard icon={<DollarSign className="w-4 h-4" />} label="12개월 총 수익" value={formatPrice(Math.round(simulation.totalRevenue * KRW_USD_RATE), simulation.totalRevenue)} />
+            <div className="group relative">
+              <SummaryCard icon={<DollarSign className="w-4 h-4" />} label="12개월 총 수익" value={formatPrice(Math.round(simulation.totalRevenue * KRW_USD_RATE), simulation.totalRevenue)} />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                월평균: {formatPrice(Math.round(monthlyAvgRevenue * KRW_USD_RATE), monthlyAvgRevenue)}
+              </div>
+            </div>
             <SummaryCard icon={<TrendingUp className="w-4 h-4" />} label="LTV" value={formatPrice(Math.round(simulation.ltv * KRW_USD_RATE), simulation.ltv)} />
             <SummaryCard icon={<Calendar className="w-4 h-4" />} label="페이백 시점" value={simulation.paybackMonth ? `M${simulation.paybackMonth}` : '미달성'} />
-            <SummaryCard icon={<DollarSign className="w-4 h-4" />} label="피크 수익" value={`${formatCompactNumber(simulation.peakRevenue)} (M${simulation.peakMonth})`} />
+            <SummaryCard icon={<DollarSign className="w-4 h-4" />} label="피크 수익" value={formatPrice(Math.round(simulation.peakRevenue * KRW_USD_RATE), simulation.peakRevenue)} />
           </div>
+
+          {/* 수수료 & 순익 */}
+          <Card>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">플랫폼 수수료</span>
+                <input
+                  type="number"
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(Math.min(100, Math.max(0, Number(e.target.value))))}
+                  className="w-16 text-center text-sm font-semibold px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+                <span className="text-xs text-gray-500">%</span>
+              </div>
+              <div className="h-8 w-px bg-gray-200 dark:bg-gray-700" />
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">12개월 순익</span>
+                <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                  {formatPrice(Math.round(netRevenue * KRW_USD_RATE), netRevenue)}
+                </span>
+              </div>
+              <div className="h-8 w-px bg-gray-200 dark:bg-gray-700" />
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">월평균 순익</span>
+                <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                  {formatPrice(Math.round((netRevenue / 12) * KRW_USD_RATE), netRevenue / 12)}
+                </span>
+              </div>
+            </div>
+          </Card>
 
           {/* Revenue Chart with Target LTV line */}
           <Card title="12개월 수익 프로젝션">
@@ -258,10 +300,12 @@ export default function RevenueSimulator() {
                   <YAxis yAxisId="left" tickFormatter={(v) => formatCompactNumber(Number(v))} tick={{ fontSize: 12 }} />
                   <YAxis yAxisId="right" orientation="right" tickFormatter={(v) => formatCompactNumber(Number(v))} tick={{ fontSize: 12 }} />
                   <Tooltip
-                    formatter={(value, name) => [
-                      formatUSD(Number(value)),
-                      name === 'revenue' ? '월 수익' : name === 'cumulativeRevenue' ? '누적 수익' : 'DAU',
-                    ]}
+                    formatter={(value, name) => {
+                      const v = Number(value);
+                      const label = name === 'revenue' ? '월 수익' : name === 'cumulativeRevenue' ? '누적 수익' : 'DAU';
+                      if (name === 'dau') return [formatNumber(v), label];
+                      return [formatPrice(Math.round(v * KRW_USD_RATE), v), label];
+                    }}
                   />
                   <Legend
                     formatter={(value: string) =>
@@ -273,11 +317,11 @@ export default function RevenueSimulator() {
                     y={config.targetLtv * config.dau}
                     stroke="#ef4444"
                     strokeDasharray="6 4"
-                    label={{ value: `Target LTV ($${config.targetLtv})`, position: 'right', fontSize: 10, fill: '#ef4444' }}
+                    label={{ value: `Target LTV (${formatPrice(Math.round(config.targetLtv * KRW_USD_RATE), config.targetLtv)})`, position: 'right', fontSize: 10, fill: '#ef4444' }}
                   />
-                  <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2} dot={false} />
-                  <Line yAxisId="left" type="monotone" dataKey="cumulativeRevenue" stroke="#10b981" strokeWidth={2} dot={false} />
-                  <Line yAxisId="right" type="monotone" dataKey="dau" stroke="#f59e0b" strokeWidth={1.5} dot={false} strokeDasharray="5 5" />
+                  <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line yAxisId="left" type="monotone" dataKey="cumulativeRevenue" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line yAxisId="right" type="monotone" dataKey="dau" stroke="#f59e0b" strokeWidth={1.5} dot={{ r: 2 }} strokeDasharray="5 5" />
                 </LineChart>
               </ResponsiveContainer>
             </div>

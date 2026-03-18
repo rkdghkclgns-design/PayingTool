@@ -1,7 +1,10 @@
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { CheckCircle2, XCircle, Target } from 'lucide-react';
 import type { MetricsConfig } from '../../models';
+import { useMetricsStore } from '../../stores/metrics-store';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
+import Button from '../ui/Button';
 
 interface KpiTargetSummaryProps {
   readonly config: MetricsConfig;
@@ -13,6 +16,7 @@ interface KpiCheck {
   readonly current: number;
   readonly target: number;
   readonly isPercentage: boolean;
+  readonly configKey: keyof MetricsConfig;
 }
 
 function formatValue(value: number, isPercentage: boolean): string {
@@ -21,22 +25,46 @@ function formatValue(value: number, isPercentage: boolean): string {
 }
 
 export default function KpiTargetSummary({ config, currentLtv }: KpiTargetSummaryProps) {
+  const updateMetric = useMetricsStore((s) => s.updateMetric);
+  const [applied, setApplied] = useState(false);
+
   const checks: readonly KpiCheck[] = [
-    { label: 'LTV', current: currentLtv, target: config.targetLtv, isPercentage: false },
-    { label: 'ARPU (ARPDAU)', current: config.arpdau, target: config.targetArpu, isPercentage: false },
-    { label: '과금 전환율', current: config.conversionRate, target: config.targetConversion, isPercentage: true },
-    { label: 'D1 리텐션', current: config.d1Retention, target: config.targetD1Retention, isPercentage: true },
-    { label: 'D7 리텐션', current: config.d7Retention, target: config.targetD7Retention, isPercentage: true },
-    { label: 'D30 리텐션', current: config.d30Retention, target: config.targetD30Retention, isPercentage: true },
+    { label: 'LTV', current: currentLtv, target: config.targetLtv, isPercentage: false, configKey: 'arpdau' },
+    { label: 'ARPU (ARPDAU)', current: config.arpdau, target: config.targetArpu, isPercentage: false, configKey: 'arpdau' },
+    { label: '과금 전환율', current: config.conversionRate, target: config.targetConversion, isPercentage: true, configKey: 'conversionRate' },
+    { label: 'D1 리텐션', current: config.d1Retention, target: config.targetD1Retention, isPercentage: true, configKey: 'd1Retention' },
+    { label: 'D7 리텐션', current: config.d7Retention, target: config.targetD7Retention, isPercentage: true, configKey: 'd7Retention' },
+    { label: 'D30 리텐션', current: config.d30Retention, target: config.targetD30Retention, isPercentage: true, configKey: 'd30Retention' },
   ];
 
   const achievedCount = checks.filter((c) => c.current >= c.target).length;
   const totalCount = checks.length;
 
+  const handleApplyTargets = useCallback(() => {
+    // 목표값을 지표 설정에 반영
+    updateMetric('arpdau', config.targetArpu);
+    updateMetric('conversionRate', config.targetConversion);
+    updateMetric('d1Retention', config.targetD1Retention);
+    updateMetric('d7Retention', config.targetD7Retention);
+    updateMetric('d30Retention', config.targetD30Retention);
+    setApplied(true);
+    setTimeout(() => setApplied(false), 2000);
+  }, [config, updateMetric]);
+
   return (
     <Card
       title="KPI 목표 달성 현황"
       subtitle={`${achievedCount}/${totalCount} 달성`}
+      headerAction={
+        <Button
+          variant={applied ? 'secondary' : 'primary'}
+          size="sm"
+          onClick={handleApplyTargets}
+          icon={<Target className="w-3.5 h-3.5" />}
+        >
+          {applied ? '적용 완료!' : '목표 달성 적용'}
+        </Button>
+      }
     >
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {checks.map((check) => {

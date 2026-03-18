@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { ArrowUpDown, Pencil, Trash2, CheckSquare, Square } from 'lucide-react';
 import type { Product } from '../../models';
 import { PRODUCT_CATEGORY_LABELS, RETENTION_STAGE_LABELS } from '../../utils/constants';
-import { formatPrice } from '../../utils/formatters';
+import { formatProductPrice } from '../../utils/formatters';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 
@@ -114,7 +114,7 @@ export default function ProductList({ products, onEdit, onDelete, onBulkDelete }
                   <Badge variant="primary" size="sm">{PRODUCT_CATEGORY_LABELS.get(product.category) ?? product.category}</Badge>
                 </td>
                 <td className="py-3 px-2 text-right whitespace-nowrap">
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{formatPrice(product.priceKRW, product.priceUSD)}</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{formatProductPrice(product.priceKRW, product.priceUSD)}</span>
                 </td>
                 <td className="py-3 px-2">
                   <Badge variant="warning" size="sm">{RETENTION_STAGE_LABELS.get(product.targetRetentionStage) ?? product.targetRetentionStage}</Badge>

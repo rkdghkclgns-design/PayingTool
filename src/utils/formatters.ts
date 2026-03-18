@@ -36,11 +36,18 @@ export function formatNumber(value: number): string {
 /**
  * Format price as "원화(달러)" combined format.
  * Example: formatPrice(1350, 0.99) -> "₩1,350 ($0.99)"
- * If KRW is 0 and USD is 0, returns "무료"
  */
 export function formatPrice(krw: number, usd: number): string {
-  if (krw === 0 && usd === 0) return '무료';
   return `${formatKRW(krw)} (${formatUSD(usd)})`;
+}
+
+/**
+ * Format product price — shows "무료" for free products (0원).
+ * Use only for product prices, not for revenue/metrics.
+ */
+export function formatProductPrice(krw: number, usd: number): string {
+  if (krw === 0 && usd === 0) return '무료';
+  return formatPrice(krw, usd);
 }
 
 /**
