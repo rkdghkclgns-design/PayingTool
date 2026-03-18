@@ -27,7 +27,8 @@ type TabId = (typeof TABS)[number]['id'];
 function GenreBenchmarkPanel() {
   const selectedGenre = useGenreStore((s) => s.selectedGenre);
   const genreSource = useGenreStore((s) => s.genreSource);
-  const updateMetric = useMetricsStore((s) => s.updateMetric);
+  const currentConfig = useMetricsStore((s) => s.config);
+  const loadConfig = useMetricsStore((s) => s.loadConfig);
   const [applied, setApplied] = useState(false);
 
   const blueprint = useMemo(
@@ -43,21 +44,25 @@ function GenreBenchmarkPanel() {
     if (!blueprint?.benchmarkKpis) return;
     const kpis = blueprint.benchmarkKpis;
 
-    updateMetric('conversionRate', kpis.conversionRate.median / 100);
-    updateMetric('arpdau', kpis.arpdau.median);
-    updateMetric('arppu', kpis.arppu.median);
-    updateMetric('d1Retention', kpis.d1Retention.median / 100);
-    updateMetric('d7Retention', kpis.d7Retention.median / 100);
-    updateMetric('d30Retention', kpis.d30Retention.median / 100);
-
-    // 목표 KPI: high 값 기반
-    updateMetric('targetConversion', kpis.conversionRate.high / 100);
-    updateMetric('targetD1Retention', kpis.d1Retention.high / 100);
-    updateMetric('targetD7Retention', kpis.d7Retention.high / 100);
-    updateMetric('targetD30Retention', kpis.d30Retention.high / 100);
-    updateMetric('targetArpu', kpis.arpdau.high);
-    updateMetric('targetLtv', Math.round(kpis.arpdau.high * 30 * 100) / 100);
-  }, [blueprint, updateMetric]);
+    // 한 번에 반영 — 개별 updateMetric 12회 호출 대신 loadConfig 1회로 안정적 반영
+    loadConfig({
+      ...currentConfig,
+      // 현재 지표: median 기반
+      conversionRate: kpis.conversionRate.median / 100,
+      arpdau: kpis.arpdau.median,
+      arppu: kpis.arppu.median,
+      d1Retention: kpis.d1Retention.median / 100,
+      d7Retention: kpis.d7Retention.median / 100,
+      d30Retention: kpis.d30Retention.median / 100,
+      // 목표 KPI: high 값 기반
+      targetConversion: kpis.conversionRate.high / 100,
+      targetD1Retention: kpis.d1Retention.high / 100,
+      targetD7Retention: kpis.d7Retention.high / 100,
+      targetD30Retention: kpis.d30Retention.high / 100,
+      targetArpu: kpis.arpdau.high,
+      targetLtv: Math.round(kpis.arpdau.high * 30 * 100) / 100,
+    });
+  }, [blueprint, currentConfig, loadConfig]);
 
   // 장르 변경 시 자동으로 KPI 벤치마크 적용
   const prevGenreRef = useRef<string | null>(null);
