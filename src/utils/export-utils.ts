@@ -5,6 +5,7 @@ import { useFunnelStore } from '../stores/funnel-store';
 import { useMetricsStore } from '../stores/metrics-store';
 import { useSchemaStore } from '../stores/schema-store';
 import { useProjectStore } from '../stores/project-store';
+import { useGenreStore } from '../stores/genre-store';
 import type { Product, FunnelStage, MetricsConfig, DataSchema, GameStructure } from '../models';
 import {
   PRODUCT_CATEGORY_LABELS,
@@ -212,6 +213,7 @@ function buildProductsSection(products: readonly Product[]): string {
 function buildFunnelSection(
   stages: readonly FunnelStage[],
   products: readonly Product[],
+  totalUsers: number,
 ): string {
   if (stages.length === 0) {
     return `
@@ -222,7 +224,6 @@ function buildFunnelSection(
   }
 
   const sortedStages = [...stages].sort((a, b) => a.order - b.order);
-  const totalUsers = 100000;
 
   // 유저 수 계산 (각 단계 전환율 적용)
   const stageUsers = sortedStages.map((stage) => {
@@ -822,12 +823,18 @@ export function downloadReport(): void {
   const metricsConfig = useMetricsStore.getState().config;
   const schemas = useSchemaStore.getState().schemas;
   const projectState = useProjectStore.getState();
+  const genreState = useGenreStore.getState();
   const activeProject = projectState.projects.find(
     (p) => p.id === projectState.activeProjectId,
   );
 
+  // 장르: genre-store (사용자 지정) 우선, 없으면 프로젝트 장르
+  const displayGenre = genreState.selectedGenre
+    ? (GAME_GENRE_LABELS.get(genreState.selectedGenre as Parameters<typeof GAME_GENRE_LABELS.get>[0]) ?? genreState.selectedGenre)
+    : activeProject ? (GAME_GENRE_LABELS.get(activeProject.gameGenre) ?? activeProject.gameGenre) : '';
+
   const projectNameDisplay = activeProject
-    ? `${activeProject.name} (${GAME_GENRE_LABELS.get(activeProject.gameGenre) ?? activeProject.gameGenre})`
+    ? `${activeProject.name}${displayGenre ? ` (${displayGenre})` : ''}`
     : 'PayingTool';
 
   const analysisSection = analysisResult
@@ -855,7 +862,7 @@ export function downloadReport(): void {
 
     ${analysisSection}
     ${buildProductsSection(products)}
-    ${buildFunnelSection(stages, products)}
+    ${buildFunnelSection(stages, products, metricsConfig.dau)}
     ${buildMetricsSection(metricsConfig)}
     ${buildSchemaSection(schemas)}
     ${buildErDiagramSection(schemas)}

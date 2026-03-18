@@ -3,7 +3,6 @@ import { Package, Plus, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import type { FunnelStage, Product } from '../../models';
 import { formatPercent, formatNumber, formatPrice } from '../../utils/formatters';
 import { KRW_USD_RATE } from '../../utils/constants';
-import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 
 interface FunnelStageCardProps {
@@ -199,10 +198,10 @@ export default function FunnelStageCard({
 
         {/* Products */}
         <div className="flex flex-wrap gap-1.5 mb-2">
-          {assignedProducts.slice(0, 3).map((product) => (
+          {assignedProducts.map((product) => (
             <div key={product.id} className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full pl-2 pr-1 py-0.5">
               <Package className="w-3 h-3 text-gray-500" />
-              <span className="text-xs text-gray-700 dark:text-gray-300 max-w-[100px] truncate">{product.name}</span>
+              <span className="text-xs text-gray-700 dark:text-gray-300 max-w-[140px] truncate">{product.name}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); onRemoveProduct(product.id); }}
                 className="p-0.5 text-gray-400 hover:text-red-500 transition-colors"
@@ -211,9 +210,6 @@ export default function FunnelStageCard({
               </button>
             </div>
           ))}
-          {assignedProducts.length > 3 && (
-            <Badge variant="default" size="sm">+{assignedProducts.length - 3}</Badge>
-          )}
         </div>
 
         <Button
@@ -261,18 +257,6 @@ export default function FunnelStageCard({
               <span>예상 수익 기여:</span>
               <span className="font-semibold text-green-600 dark:text-green-400">{formatPrice(Math.round(stageRevenue * KRW_USD_RATE), stageRevenue)}</span>
             </div>
-            {assignedProducts.length > 3 && (
-              <div className="flex flex-wrap gap-1.5">
-                {assignedProducts.slice(3).map((product) => (
-                  <div key={product.id} className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full pl-2 pr-1 py-0.5">
-                    <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{product.name}</span>
-                    <button onClick={(e) => { e.stopPropagation(); onRemoveProduct(product.id); }} className="p-0.5 text-gray-400 hover:text-red-500">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
