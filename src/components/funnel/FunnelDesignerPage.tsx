@@ -242,9 +242,13 @@ export default function FunnelDesignerPage() {
       // AI 반환 데이터로 기본 스테이지 업데이트 (한 번에 구성)
       const mergedStages = defaultStages.map((stage) => {
         const aiMatch = aiStages.find((ai: Record<string, unknown>) =>
-          ai.name === stage.name || ai.labelKo === stage.label
+          ai.name === stage.name
         );
         if (!aiMatch) return stage;
+
+        // conversionRate: AI는 퍼센트 정수(100, 80, 3 등)로 반환 → 소수로 변환
+        const rawRate = Number(aiMatch.conversionRate ?? 0);
+        const normalizedRate = rawRate > 1 ? rawRate / 100 : rawRate;
 
         // 상품 자동 배치 — 이 단계에 맞는 상품 ID 수집
         const targetCategories = Object.entries(CATEGORY_TO_STAGE)
@@ -254,12 +258,17 @@ export default function FunnelDesignerPage() {
           .filter((p) => targetCategories.includes(p.category))
           .map((p) => p.id);
 
+        // AI strategies를 description에 병합
+        const strategies = Array.isArray(aiMatch.strategies) ? (aiMatch.strategies as string[]).join(', ') : '';
+        const descParts = [aiMatch.notes, aiMatch.targetKpi, strategies].filter(Boolean);
+        const description = descParts.length > 0 ? descParts.join(' | ') : stage.description;
+
         return {
           ...stage,
-          label: (aiMatch.labelKo || aiMatch.label || stage.label) as string,
-          conversionRate: (aiMatch.conversionRate ?? stage.conversionRate) as number,
-          description: (aiMatch.notes || aiMatch.targetKpi || stage.description) as string,
-          assignedProductIds: [...stage.assignedProductIds, ...matchedProductIds],
+          label: ((aiMatch.labelKo || aiMatch.label || stage.label) as string),
+          conversionRate: normalizedRate || stage.conversionRate,
+          description: description as string,
+          assignedProductIds: [...new Set([...stage.assignedProductIds, ...matchedProductIds])],
         };
       });
 
@@ -273,7 +282,7 @@ export default function FunnelDesignerPage() {
     } finally {
       setIsAiFunnel(false);
     }
-  }, [analysisResult, resetStages, updateStage, updateStageLabel, assignProduct, products]);
+  }, [analysisResult, resetStages, products]);
 
   const assignModalStage = assignModalStageId
     ? stages.find((s) => s.id === assignModalStageId) ?? null

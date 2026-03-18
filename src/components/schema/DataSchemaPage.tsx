@@ -8,6 +8,7 @@ import ErDiagram from './ErDiagram';
 import { useSchemaStore } from '../../stores/schema-store';
 import { useProductStore } from '../../stores/product-store';
 import { useMindmapStore } from '../../stores/mindmap-store';
+import { generateSchemas } from '../../services/gemini';
 import { generateSchemasFromProducts } from '../../utils/schema-generator';
 import { DEFAULT_SCHEMAS } from '../../data/schema-templates';
 
@@ -22,11 +23,35 @@ export default function DataSchemaPage() {
   const [selectedSchemaId, setSelectedSchemaId] = useState<string | null>(null);
   const [viewTab, setViewTab] = useState<ViewTab>('list');
 
-  const handleAutoGenerate = useCallback(() => {
-    const generated = generateSchemasFromProducts(products, genre);
-    setSchemas(generated);
-    if (generated.length > 0) {
-      setSelectedSchemaId(generated[0].id);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
+  const handleAutoGenerate = useCallback(async () => {
+    if (products.length === 0) {
+      // 상품이 없으면 로컬 생성 fallback
+      const generated = generateSchemasFromProducts(products, genre);
+      setSchemas(generated);
+      if (generated.length > 0) setSelectedSchemaId(generated[0].id);
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerateError(null);
+    try {
+      // AI 기반 스키마 생성 (상품 + 장르 기반)
+      const mutableProducts = [...products];
+      const generated = await generateSchemas(mutableProducts, genre);
+      setSchemas(generated);
+      if (generated.length > 0) setSelectedSchemaId(generated[0].id);
+    } catch (err) {
+      // AI 실패 시 로컬 생성 fallback
+      const fallback = generateSchemasFromProducts(products, genre);
+      setSchemas(fallback);
+      if (fallback.length > 0) setSelectedSchemaId(fallback[0].id);
+      setGenerateError(err instanceof Error ? err.message : 'AI 스키마 생성 실패 — 로컬 생성으로 대체됨');
+      setTimeout(() => setGenerateError(null), 5000);
+    } finally {
+      setIsGenerating(false);
     }
   }, [products, genre, setSchemas]);
 
@@ -51,8 +76,9 @@ export default function DataSchemaPage() {
           size="sm"
           icon={<Wand2 className="w-4 h-4" />}
           onClick={handleAutoGenerate}
+          loading={isGenerating}
         >
-          스키마 자동 생성
+          {isGenerating ? 'AI 생성 중...' : 'AI 스키마 생성'}
         </Button>
         <Button
           variant="secondary"
@@ -62,6 +88,10 @@ export default function DataSchemaPage() {
         >
           템플릿 로드
         </Button>
+
+        {generateError && (
+          <span className="text-xs text-amber-600 dark:text-amber-400">{generateError}</span>
+        )}
 
         {/* View Tab Toggle */}
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 ml-2">

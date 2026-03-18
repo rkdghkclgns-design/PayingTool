@@ -59,7 +59,7 @@ function GenreBenchmarkPanel() {
   }, [blueprint, updateMetric]);
 
   // 장르 변경 시 자동으로 KPI 벤치마크 적용
-  const prevGenreRef = useRef(selectedGenre);
+  const prevGenreRef = useRef<string | null>(null);
   useEffect(() => {
     if (selectedGenre && selectedGenre !== prevGenreRef.current) {
       applyBenchmarks();
