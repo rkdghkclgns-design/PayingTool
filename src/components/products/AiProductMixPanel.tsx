@@ -114,7 +114,7 @@ const MANDATORY_PRODUCT_DEFS: readonly MandatoryProductDef[] = [
   {
     name: '오퍼월 보상',
     category: 'other',
-    description: '오퍼월을 통한 무료 재화 획득 시스템',
+    description: '오퍼월을 통한 무료 재화 획득 시스템. 외부 광고/설문 완료 시 인게임 재화 지급.',
     matchName: ['오퍼월', 'offerwall', '오퍼 월'],
     matchType: ['offerwalls', 'rewarded_ads'],
   },
@@ -124,6 +124,36 @@ const MANDATORY_PRODUCT_DEFS: readonly MandatoryProductDef[] = [
     description: '시즌별 보상을 제공하는 패스권 상품',
     matchName: ['패스', '시즌패스', '배틀패스', 'pass', 'battle_pass'],
     matchType: ['battle_pass', 'pass'],
+  },
+  // 비유료 상품 — 골드(인게임 재화) 상품
+  {
+    name: '골드 일일 상점',
+    category: 'other',
+    description: '골드(인게임 재화)로 구매 가능한 일일 한정 아이템 상점. 매일 갱신되며 강화석, 경험치 포션, 소모품 등을 제공.',
+    matchName: ['골드 상점', '골드 일일', '인게임 재화 상점'],
+    matchType: [],
+  },
+  {
+    name: '골드 장비 상자',
+    category: 'other',
+    description: '골드로 구매 가능한 랜덤 장비 상자. 일반~레어 등급 장비를 획득할 수 있으며, 뽑기 시스템의 무료 버전.',
+    matchName: ['골드 장비', '골드 상자', '무료 뽑기'],
+    matchType: [],
+  },
+  {
+    name: '골드 스태미나 충전',
+    category: 'energy',
+    description: '골드로 에너지/스태미나를 즉시 충전. 유료 다이아몬드 충전 대비 효율은 낮지만 무과금 유저도 이용 가능.',
+    matchName: ['골드 스태미나', '골드 에너지', '골드 충전'],
+    matchType: [],
+  },
+  // 보상형 광고 상품 (0원)
+  {
+    name: '보상형 광고 - 2배 보상',
+    category: 'other',
+    description: '스테이지 클리어 후 30초 광고를 시청하면 획득 보상이 2배가 됩니다. 하루 10회 제한.',
+    matchName: ['보상형 광고', '광고 시청', '2배 보상', 'rewarded'],
+    matchType: ['rewarded_ads'],
   },
 ] as const;
 
@@ -149,21 +179,25 @@ function ensureMandatoryProducts(
 
   for (const def of MANDATORY_PRODUCT_DEFS) {
     if (!hasMandatoryProduct(products, def)) {
+      // 유료 판정: starter_pack, battle_pass 등은 유료. 골드/오퍼월/보상형 광고는 비유료
+      const isFreeProduct = def.name.includes('골드') || def.name.includes('오퍼월') || def.name.includes('보상형 광고');
+      const isPaidProduct = !isFreeProduct && def.category !== 'other';
+
       missing.push({
         id: generateProductId(),
         projectId,
         name: def.name,
         description: def.description,
         category: def.category,
-        priceKRW: def.category === 'starter_pack' ? midpointKrw : 0,
-        priceUSD: def.category === 'starter_pack' ? midpointUsd : 0,
-        targetSegments: ['non_payer', 'minnow'] as const,
+        priceKRW: isPaidProduct ? (def.category === 'starter_pack' ? midpointKrw : midpointKrw * 3) : 0,
+        priceUSD: isPaidProduct ? (def.category === 'starter_pack' ? midpointUsd : midpointUsd * 3) : 0,
+        targetSegments: isFreeProduct ? ['non_payer', 'offerwall'] as const : ['non_payer', 'minnow'] as const,
         targetRetentionStage: 'd7' as const,
         contents: [],
         purchaseLimit: { type: 'unlimited' as const, maxCount: 0 },
         funnelStageId: null,
         salesTechnique: 'standard' as const,
-        isPaid: def.category !== 'other',
+        isPaid: isPaidProduct,
         sortOrder: products.length + missing.length,
         isActive: true,
         createdAt: now,

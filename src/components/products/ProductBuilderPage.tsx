@@ -16,6 +16,7 @@ import SegmentTabs from './SegmentTabs';
 import ProductCard from './ProductCard';
 import ProductList from './ProductList';
 import ProductForm from './ProductForm';
+import SalesAnalysisPanel from './SalesAnalysisPanel';
 
 type ViewMode = 'grid' | 'list';
 
@@ -318,6 +319,9 @@ export default function ProductBuilderPage() {
           <ProductList products={filteredProducts} onEdit={handleEdit} onDelete={handleDelete} onBulkDelete={handleBulkDelete} />
         </div>
       )}
+
+      {/* Sales Technique Analysis — 각 탭 하단 */}
+      <SalesAnalysisPanel products={displayProducts} tabType={paidFilter} />
 
       {/* Product Form Modal */}
       {isFormOpen && (
