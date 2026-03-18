@@ -28,6 +28,7 @@ function GenreBenchmarkPanel() {
   const selectedGenre = useGenreStore((s) => s.selectedGenre);
   const genreSource = useGenreStore((s) => s.genreSource);
   const updateMetric = useMetricsStore((s) => s.updateMetric);
+  const [applied, setApplied] = useState(false);
 
   const blueprint = useMemo(
     () => (selectedGenre ? getGenreBlueprint(selectedGenre as GameGenre) : undefined),
@@ -67,7 +68,11 @@ function GenreBenchmarkPanel() {
     prevGenreRef.current = selectedGenre;
   }, [selectedGenre, applyBenchmarks]);
 
-  const handleApplyBenchmarks = applyBenchmarks;
+  const handleApplyBenchmarks = useCallback(() => {
+    applyBenchmarks();
+    setApplied(true);
+    setTimeout(() => setApplied(false), 2000);
+  }, [applyBenchmarks]);
 
   if (!selectedGenre || !blueprint?.benchmarkKpis) {
     return (
@@ -97,12 +102,12 @@ function GenreBenchmarkPanel() {
           )}
         </div>
         <Button
-          variant="primary"
+          variant={applied ? 'secondary' : 'primary'}
           size="sm"
           onClick={handleApplyBenchmarks}
           icon={<Sparkles className="w-3.5 h-3.5" />}
         >
-          벤치마크 적용
+          {applied ? '적용 완료!' : '벤치마크 적용'}
         </Button>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

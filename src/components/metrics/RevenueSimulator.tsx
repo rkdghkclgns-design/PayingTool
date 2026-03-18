@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
 import {
   LineChart,
   Line,
@@ -41,29 +41,81 @@ interface MetricSliderProps {
   readonly max: number;
   readonly step: number;
   readonly suffix?: string;
+  readonly prefix?: string;
+  readonly unit?: string;
   readonly target?: number;
   readonly onChange: (value: number) => void;
 }
 
-function MetricSlider({ label, value, min, max, step, suffix = '', target, onChange }: MetricSliderProps) {
+function MetricSlider({ label, value, min, max, step, suffix = '', prefix = '', unit = '', target, onChange }: MetricSliderProps) {
   const achieved = target !== undefined ? value >= target : undefined;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+
+  // 표시용 값 계산
+  const displayValue = (() => {
+    if (suffix === '%' && value < 1) {
+      return `${(value * 100).toFixed(1)}%`;
+    }
+    return `${prefix}${formatNumber(value)}${suffix}`;
+  })();
+
+  const handleEditStart = () => {
+    if (suffix === '%' && value < 1) {
+      setEditValue((value * 100).toFixed(1));
+    } else {
+      setEditValue(String(value));
+    }
+    setIsEditing(true);
+  };
+
+  const handleEditEnd = () => {
+    setIsEditing(false);
+    let parsed = parseFloat(editValue);
+    if (isNaN(parsed)) return;
+
+    // % 값은 /100으로 변환
+    if (suffix === '%' && parsed > 1) {
+      parsed = parsed / 100;
+    }
+
+    // 범위 제한
+    const clamped = Math.min(max, Math.max(min, parsed));
+    onChange(clamped);
+  };
 
   return (
     <div className="flex flex-col gap-1">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-1.5">
           <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>
+          {unit && <span className="text-[10px] text-gray-400 dark:text-gray-500">({unit})</span>}
           {achieved !== undefined && (
             <Badge variant={achieved ? 'success' : 'danger'} size="sm">
               {achieved ? '달성' : '미달성'}
             </Badge>
           )}
         </div>
-        <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
-          {typeof value === 'number' && value < 1 && suffix === '%'
-            ? `${(value * 100).toFixed(1)}%`
-            : `${formatNumber(value)}${suffix}`}
-        </span>
+        {isEditing ? (
+          <input
+            type="number"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleEditEnd}
+            onKeyDown={(e) => e.key === 'Enter' && handleEditEnd()}
+            autoFocus
+            className="w-24 text-right text-xs font-semibold px-1.5 py-0.5 rounded border border-brand-300 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-brand-500"
+            step={suffix === '%' ? 0.1 : step}
+          />
+        ) : (
+          <button
+            onClick={handleEditStart}
+            className="text-xs font-semibold text-gray-900 dark:text-gray-100 hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-brand-50 dark:hover:bg-brand-950"
+            title="클릭하여 직접 입력"
+          >
+            {displayValue}
+          </button>
+        )}
       </div>
       <input
         type="range"
@@ -88,13 +140,15 @@ const SLIDER_CONFIGS: readonly {
   readonly max: number;
   readonly step: number;
   readonly suffix: string;
+  readonly prefix?: string;
+  readonly unit?: string;
 }[] = [
-  { key: 'dau', label: 'DAU', min: 100, max: 500000, step: 100, suffix: '' },
-  { key: 'mau', label: 'MAU', min: 1000, max: 5000000, step: 1000, suffix: '' },
+  { key: 'dau', label: 'DAU', min: 100, max: 500000, step: 100, suffix: '', unit: '명' },
+  { key: 'mau', label: 'MAU', min: 1000, max: 5000000, step: 1000, suffix: '', unit: '명' },
   { key: 'conversionRate', label: '과금 전환율', min: 0.001, max: 0.2, step: 0.001, suffix: '%' },
-  { key: 'arpdau', label: 'ARPDAU', min: 0.01, max: 2.0, step: 0.01, suffix: '' },
-  { key: 'arppu', label: 'ARPPU', min: 1, max: 200, step: 0.5, suffix: '' },
-  { key: 'cpi', label: 'CPI', min: 0.1, max: 20, step: 0.1, suffix: '' },
+  { key: 'arpdau', label: 'ARPDAU', min: 0.01, max: 2.0, step: 0.01, suffix: '', prefix: '$', unit: 'USD' },
+  { key: 'arppu', label: 'ARPPU', min: 1, max: 200, step: 0.5, suffix: '', prefix: '$', unit: 'USD' },
+  { key: 'cpi', label: 'CPI', min: 0.1, max: 20, step: 0.1, suffix: '', prefix: '$', unit: 'USD' },
   { key: 'd1Retention', label: 'D1 리텐션', min: 0.05, max: 0.8, step: 0.01, suffix: '%' },
   { key: 'd7Retention', label: 'D7 리텐션', min: 0.01, max: 0.5, step: 0.01, suffix: '%' },
   { key: 'd30Retention', label: 'D30 리텐션', min: 0.005, max: 0.3, step: 0.005, suffix: '%' },
@@ -169,6 +223,8 @@ export default function RevenueSimulator() {
                     max={sc.max}
                     step={sc.step}
                     suffix={sc.suffix}
+                    prefix={sc.prefix}
+                    unit={sc.unit}
                     target={targetValue}
                     onChange={(v) => updateMetric(sc.key, v)}
                   />

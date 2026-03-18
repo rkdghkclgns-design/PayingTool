@@ -203,22 +203,30 @@ export default function FunnelDesignerPage() {
   const [isAiFunnel, setIsAiFunnel] = useState(false);
   const [aiFunnelError, setAiFunnelError] = useState<string | null>(null);
 
-  // 상품 카테고리 → 퍼널 단계 매핑
+  // 상품 카테고리 → 퍼널 단계 매핑 (실제 게임 설계 패턴 기반)
   const CATEGORY_TO_STAGE: Readonly<Record<string, string>> = {
+    // 첫 구매 유도 단계
     starter_pack: 'first_purchase',
     piggy_bank: 'first_purchase',
+    remove_ads: 'first_purchase',
+    // 첫 구매 유도 촉진 단계
+    energy: 'first_purchase_prompt',
+    boost: 'first_purchase_prompt',
+    // 코어루프 진입 단계
+    cosmetic: 'core_loop_engaged',
+    // 반복 결제 단계
     battle_pass: 'repeat_purchase',
     subscription: 'repeat_purchase',
     pass: 'repeat_purchase',
     currency_pack: 'repeat_purchase',
     bundle: 'repeat_purchase',
-    gacha: 'subscription_or_vip',
+    gacha: 'repeat_purchase',
+    // VIP/구독 단계
     vip: 'subscription_or_vip',
-    cosmetic: 'core_loop_engaged',
-    energy: 'core_loop_engaged',
-    boost: 'core_loop_engaged',
-    remove_ads: 'first_purchase_prompt',
-    other: 'first_purchase_prompt',
+    probability_package: 'subscription_or_vip',
+    limited_offer: 'repeat_purchase',
+    // 기타
+    other: 'core_loop_engaged',
   };
 
   const handleAiFunnel = useCallback(async () => {
