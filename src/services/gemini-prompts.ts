@@ -56,7 +56,7 @@ export const PRODUCT_RECOMMENDATION_PROMPT = `당신은 게임 유료화 전략 
     ],
     "valueMultiplier": 5.0,
     "purchaseLimit": {"type": "once | daily | weekly | monthly | unlimited", "maxCount": 1},
-    "salesTechnique": "standard | relay | popup | custom",
+    "salesTechnique": "standard | relay | popup | custom | limited_time | first_purchase | level_up | comeback | bundle_step | flash_sale",
     "isPaid": true,
     "isAiGenerated": true,
     "funnelStages": ["first_purchase"],
@@ -78,12 +78,18 @@ export const PRODUCT_RECOMMENDATION_PROMPT = `당신은 게임 유료화 전략 
 10. 배틀패스/시즌패스(battle_pass) 상품은 반드시 1개 이상 포함하세요 - 패스 보상은 게임 시스템 기반으로 구성하세요
 11. 광고 제거(remove_ads) 상품을 반드시 포함하세요 — 어떤 광고를 제거하는지(전면광고, 배너 등) description에 상세히 기술. isPaid: true
 12. 오퍼월/보상형 광고 상품을 반드시 포함하세요 — 게임 내 어디에 배치하면 효과적인지 description에 상세히 기술. isPaid: false
-13. salesTechnique 규칙:
-    - relay(릴레이): 전 단계 상품을 구매해야 다음 상품을 구매 가능한 연쇄 상품
-    - popup(팝업): 특정 확률에 따라 노출되는 한정 상품
-    - custom(맞춤): 사용자의 레벨, 전투력 등을 측정하여 필요한 상품을 제공하는 개인화 상품
+13. salesTechnique 규칙 (10가지 판매 기법):
     - standard(일반): 상시 판매 상품
-    - 릴레이/팝업/맞춤 상품을 각각 최소 1개 이상 포함하세요`;
+    - relay(릴레이): 전 단계 상품을 구매해야 다음 상품 구매 가능한 연쇄 상품 (예: 성장 번들 1~3단계)
+    - popup(팝업): 특정 조건(스테이지 실패, 보스 클리어 등) 달성 시 팝업으로 노출되는 한정 상품
+    - custom(맞춤): 유저의 레벨, 전투력, 과금 이력을 분석하여 개인화된 상품 제공
+    - limited_time(기간 한정): 24시간/주말/시즌 등 기간 한정 판매 (예: 크리스마스 한정 팩)
+    - first_purchase(첫 결제): NPU의 첫 결제만을 위한 초특가 1회 한정 상품
+    - level_up(레벨업): 특정 레벨 달성 시 노출되는 성장 지원 패키지
+    - comeback(복귀 유저): 7일 이상 미접속 복귀 유저 전용 환영 오퍼
+    - bundle_step(단계별 번들): 구매할수록 가격 대비 가치가 상승하는 단계별 번들 세트
+    - flash_sale(플래시 세일): 1~2시간 한정 대폭 할인 (긴급성으로 구매 전환율 극대화)
+    - 최소 5가지 이상의 다양한 판매 기법을 사용하세요`;
 
 export const SCHEMA_GENERATION_PROMPT = `당신은 게임 백엔드 데이터베이스 설계 전문가입니다. 다음 유료화 상품 목록과 게임 장르를 분석하고, 최적의 데이터베이스 스키마를 생성하세요.
 

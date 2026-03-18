@@ -41,7 +41,17 @@ export interface ProductContent {
   readonly description: string;
 }
 
-export type SalesTechnique = 'standard' | 'relay' | 'popup' | 'custom';
+export type SalesTechnique =
+  | 'standard'       // 상시 판매
+  | 'relay'          // 릴레이 (전단계 구매 필요)
+  | 'popup'          // 팝업 오퍼 (조건 달성 시 노출)
+  | 'custom'         // 맞춤 오퍼 (유저 데이터 기반 개인화)
+  | 'limited_time'   // 기간 한정 판매
+  | 'first_purchase' // 첫 결제 전용 (1회 한정 초특가)
+  | 'level_up'       // 레벨업/성장 오퍼
+  | 'comeback'       // 복귀 유저 전용
+  | 'bundle_step'    // 단계별 번들 (구매할수록 가치 상승)
+  | 'flash_sale';    // 플래시 세일 (짧은 시간 대폭 할인)
 
 export interface PurchaseLimit {
   readonly type: 'once' | 'daily' | 'weekly' | 'monthly' | 'unlimited';

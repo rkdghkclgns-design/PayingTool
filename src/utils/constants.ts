@@ -94,7 +94,13 @@ export const KRW_USD_RATE = 1350;
 
 export const SALES_TECHNIQUE_LABELS: Map<SalesTechnique, string> = new Map([
   ['standard', '일반 판매'],
-  ['relay', '릴레이 상품'],
-  ['popup', '팝업 상품'],
-  ['custom', '맞춤 상품'],
+  ['relay', '릴레이'],
+  ['popup', '팝업 오퍼'],
+  ['custom', '맞춤 오퍼'],
+  ['limited_time', '기간 한정'],
+  ['first_purchase', '첫 결제 전용'],
+  ['level_up', '레벨업 오퍼'],
+  ['comeback', '복귀 유저'],
+  ['bundle_step', '단계별 번들'],
+  ['flash_sale', '플래시 세일'],
 ]);

@@ -69,7 +69,12 @@ export default function ProductCard({ product, onEdit, onDelete }: ProductCardPr
         <Badge variant="warning" size="sm">{retentionLabel}</Badge>
         {product.salesTechnique && product.salesTechnique !== 'standard' && (
           <Badge
-            variant={product.salesTechnique === 'relay' ? 'danger' : product.salesTechnique === 'popup' ? 'primary' : 'success'}
+            variant={
+              product.salesTechnique === 'relay' || product.salesTechnique === 'bundle_step' ? 'danger'
+              : product.salesTechnique === 'flash_sale' || product.salesTechnique === 'limited_time' ? 'warning'
+              : product.salesTechnique === 'first_purchase' || product.salesTechnique === 'comeback' ? 'success'
+              : 'primary'
+            }
             size="sm"
           >
             {SALES_TECHNIQUE_LABELS.get(product.salesTechnique) ?? product.salesTechnique}

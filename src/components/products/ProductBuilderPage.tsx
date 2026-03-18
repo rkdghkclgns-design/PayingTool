@@ -1,11 +1,11 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Plus, Download, LayoutGrid, List, Package, Lightbulb, CheckCircle2 } from 'lucide-react';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import { Plus, Upload, FileDown, LayoutGrid, List, Package, Lightbulb, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Product, UserSegment, ProductCategory } from '../../models';
 import { USER_SEGMENT_LABELS, PRODUCT_CATEGORY_LABELS } from '../../utils/constants';
 import { useProductStore } from '../../stores/product-store';
 import { useGenreStore } from '../../stores/genre-store';
 import { useProjectStore } from '../../stores/project-store';
-import { DEFAULT_PRODUCTS } from '../../data/default-products';
+import { downloadSampleCsv, importProductsFromCsv } from '../../utils/csv-utils';
 import PageContainer from '../layout/PageContainer';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
@@ -48,10 +48,6 @@ const ESSENTIAL_CATEGORIES: Readonly<Record<string, readonly { category: Product
     { category: 'remove_ads', reason: '광고 제거 수요' },
   ],
 };
-
-function generateTemplateId(): string {
-  return `prod_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
 
 // ─── 상품 보강 가이드 ───
 function ProductReinforcementGuide({ products, genre }: { readonly products: readonly Product[]; readonly genre: string | null }) {
@@ -160,32 +156,41 @@ export default function ProductBuilderPage() {
     }
   }, [editingProduct, updateProduct, addProduct]);
 
-  const handleLoadTemplates = useCallback(() => {
-    if (DEFAULT_PRODUCTS.length === 0) {
-      setTemplateToast('템플릿 데이터가 없습니다.');
-      setTimeout(() => setTemplateToast(null), 3000);
-      return;
-    }
+  // CSV 관련
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const [csvError, setCsvError] = useState<string | null>(null);
 
-    // 새 ID 생성하여 중복 방지
-    let addedCount = 0;
-    const existingNames = new Set(products.map((p) => p.name));
-
-    DEFAULT_PRODUCTS.forEach((template) => {
-      // 이름 중복 체크 (ID 대신 이름으로)
-      if (!existingNames.has(template.name)) {
-        addProduct({ ...template, id: generateTemplateId() });
-        addedCount++;
-      }
-    });
-
-    if (addedCount > 0) {
-      setTemplateToast(`템플릿 ${addedCount}개가 추가되었습니다`);
-    } else {
-      setTemplateToast('이미 모든 템플릿이 로드되어 있습니다');
-    }
+  const handleDownloadSample = useCallback(() => {
+    downloadSampleCsv();
+    setTemplateToast('CSV 양식이 다운로드되었습니다');
     setTimeout(() => setTemplateToast(null), 3000);
-  }, [products, addProduct]);
+  }, []);
+
+  const handleCsvImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCsvError(null);
+    try {
+      const result = await importProductsFromCsv(file);
+      if (result.success) {
+        setTemplateToast(`CSV에서 상품 ${result.count}개가 추가되었습니다`);
+        setTimeout(() => setTemplateToast(null), 3000);
+      }
+      if (result.errors.length > 0) {
+        setCsvError(result.errors.join('\n'));
+        setTimeout(() => setCsvError(null), 8000);
+      }
+    } catch (err) {
+      setCsvError(err instanceof Error ? err.message : 'CSV 가져오기 실패');
+      setTimeout(() => setCsvError(null), 5000);
+    }
+
+    // Reset file input for re-import
+    if (csvInputRef.current) {
+      csvInputRef.current.value = '';
+    }
+  }, []);
 
   const handleCloseForm = useCallback(() => {
     setIsFormOpen(false);
@@ -242,14 +247,33 @@ export default function ProductBuilderPage() {
         </div>
       )}
 
+      {csvError && (
+        <div className="mt-3 mb-3 p-3 bg-red-50 dark:bg-red-950 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <span className="text-sm text-red-700 dark:text-red-300 whitespace-pre-line">{csvError}</span>
+        </div>
+      )}
+
+      {/* Hidden CSV file input */}
+      <input
+        ref={csvInputRef}
+        type="file"
+        accept=".csv"
+        className="hidden"
+        onChange={handleCsvImport}
+      />
+
       {/* Toolbar */}
       <div className="flex items-center justify-between mt-4 mb-4">
         <div className="flex items-center gap-2">
           <Button variant="primary" size="sm" onClick={handleAdd} icon={<Plus className="w-4 h-4" />}>
             상품 추가
           </Button>
-          <Button variant="secondary" size="sm" onClick={handleLoadTemplates} icon={<Download className="w-4 h-4" />}>
-            템플릿 가져오기
+          <Button variant="secondary" size="sm" onClick={handleDownloadSample} icon={<FileDown className="w-4 h-4" />}>
+            CSV 양식 다운로드
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => csvInputRef.current?.click()} icon={<Upload className="w-4 h-4" />}>
+            CSV 가져오기
           </Button>
         </div>
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
@@ -279,7 +303,7 @@ export default function ProductBuilderPage() {
           action={
             <div className="flex gap-2">
               <Button variant="primary" size="sm" onClick={handleAdd} icon={<Plus className="w-4 h-4" />}>상품 추가</Button>
-              <Button variant="secondary" size="sm" onClick={handleLoadTemplates} icon={<Download className="w-4 h-4" />}>템플릿 가져오기</Button>
+              <Button variant="secondary" size="sm" onClick={() => csvInputRef.current?.click()} icon={<Upload className="w-4 h-4" />}>CSV 가져오기</Button>
             </div>
           }
         />
