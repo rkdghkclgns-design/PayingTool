@@ -249,22 +249,29 @@ export default function FunnelDesignerPage() {
 
       // AI 반환 데이터로 기본 스테이지 업데이트 (한 번에 구성)
       const mergedStages = defaultStages.map((stage) => {
-        const aiMatch = aiStages.find((ai: Record<string, unknown>) =>
-          ai.name === stage.name
-        );
-        if (!aiMatch) return stage;
-
-        // conversionRate: AI는 퍼센트 정수(100, 80, 3 등)로 반환 → 소수로 변환
-        const rawRate = Number(aiMatch.conversionRate ?? 0);
-        const normalizedRate = rawRate > 1 ? rawRate / 100 : rawRate;
-
-        // 상품 자동 배치 — 이 단계에 맞는 상품 ID 수집
+        // 상품 자동 배치 — AI 응답 유무와 무관하게 항상 수행.
+        // 상품 설계 탭(useProductStore)의 상품을 카테고리 기준으로 이 단계에 배치.
         const targetCategories = Object.entries(CATEGORY_TO_STAGE)
           .filter(([, sName]) => sName === stage.name)
           .map(([cat]) => cat);
         const matchedProductIds = products
           .filter((p) => targetCategories.includes(p.category))
           .map((p) => p.id);
+        const assignedProductIds = [
+          ...new Set([...stage.assignedProductIds, ...matchedProductIds]),
+        ];
+
+        const aiMatch = aiStages.find((ai: Record<string, unknown>) =>
+          ai.name === stage.name
+        );
+        // AI가 이 단계를 반환하지 않았어도 상품 배치는 반영한다.
+        if (!aiMatch) {
+          return { ...stage, assignedProductIds };
+        }
+
+        // conversionRate: AI는 퍼센트 정수(100, 80, 3 등)로 반환 → 소수로 변환
+        const rawRate = Number(aiMatch.conversionRate ?? 0);
+        const normalizedRate = rawRate > 1 ? rawRate / 100 : rawRate;
 
         // AI strategies를 description에 병합
         const strategies = Array.isArray(aiMatch.strategies) ? (aiMatch.strategies as string[]).join(', ') : '';
@@ -276,7 +283,7 @@ export default function FunnelDesignerPage() {
           label: ((aiMatch.labelKo || aiMatch.label || stage.label) as string),
           conversionRate: normalizedRate || stage.conversionRate,
           description: description as string,
-          assignedProductIds: [...new Set([...stage.assignedProductIds, ...matchedProductIds])],
+          assignedProductIds,
         };
       });
 

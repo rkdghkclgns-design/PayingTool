@@ -46,7 +46,7 @@ export const PRODUCT_RECOMMENDATION_PROMPT = `당신은 게임 유료화 전략 
     "name": "Product Name",
     "nameKo": "상품명 (한국어)",
     "description": "상품 설명 (한국어)",
-    "category": "starter_pack | monthly_pass | battle_pass | currency_pack | resource_bundle | cosmetic | gacha | limited_offer | subscription | piggy_bank | growth_fund | vip_pass",
+    "category": "currency_pack | subscription | battle_pass | starter_pack | piggy_bank | limited_offer | cosmetic | gacha | energy | boost | bundle | vip | probability_package | pass | remove_ads | other",
     "userSegment": "npu | minnow | dolphin | whale | super_whale",
     "retentionStage": "d1 | d3 | d7 | d14 | d30 | d60 | d90 | evergreen",
     "priceUsd": 0.99,

@@ -67,6 +67,40 @@ function mapTypeToCategory(type: string): ProductCategory {
   return TYPE_TO_CATEGORY[type] ?? 'other';
 }
 
+// recommendProducts가 반환하는 카테고리 어휘를 표준 ProductCategory로 정규화.
+// (프롬프트/모델이 monthly_pass·resource_bundle 등 비표준 값을 반환해도
+//  퍼널의 CATEGORY_TO_STAGE 매칭이 깨지지 않도록 방어)
+const VALID_CATEGORIES: ReadonlySet<string> = new Set<ProductCategory>([
+  'currency_pack', 'subscription', 'battle_pass', 'starter_pack', 'piggy_bank',
+  'limited_offer', 'cosmetic', 'gacha', 'energy', 'boost', 'bundle', 'vip',
+  'probability_package', 'pass', 'remove_ads', 'other',
+]);
+
+const CATEGORY_ALIASES: Readonly<Record<string, ProductCategory>> = {
+  monthly_pass: 'subscription',
+  resource_bundle: 'bundle',
+  growth_fund: 'piggy_bank',
+  vip_pass: 'vip',
+  // 믹스 유형 어휘도 방어적으로 흡수
+  currency_packs: 'currency_pack',
+  cosmetics: 'cosmetic',
+  energy_stamina: 'energy',
+  progression_boost: 'boost',
+  bundles: 'bundle',
+  vip_membership: 'vip',
+  season_content: 'limited_offer',
+  expansion_dlc: 'limited_offer',
+  loot_box: 'gacha',
+  rewarded_ads: 'other',
+  offerwalls: 'other',
+};
+
+function normalizeCategory(raw: unknown): ProductCategory {
+  const key = String(raw ?? '').trim();
+  if (VALID_CATEGORIES.has(key)) return key as ProductCategory;
+  return CATEGORY_ALIASES[key] ?? 'other';
+}
+
 function mapSegment(segment: string | undefined): Product['targetSegments'][number] {
   const map: Record<string, Product['targetSegments'][number]> = {
     npu: 'non_payer',
@@ -358,7 +392,7 @@ export default function AiProductMixPanel() {
         projectId,
         name: (p.name || p.nameKo || `상품 ${index + 1}`) as string,
         description: (p.description || '') as string,
-        category: ((p.category || 'other') as string) as ProductCategory,
+        category: normalizeCategory(p.category),
         priceKRW: (p.priceKRW || p.priceKrw || Math.round(((p.priceUSD || p.priceUsd || 2.99) as number) * KRW_USD_RATE)) as number,
         priceUSD: (p.priceUSD || p.priceUsd || 2.99) as number,
         targetSegments: [mapSegment((p.userSegment || (Array.isArray(p.targetSegments) ? p.targetSegments[0] : undefined)) as string)] as const,
