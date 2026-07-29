@@ -11,7 +11,7 @@ import {
 } from './gemini-prompts';
 
 // ─── Supabase Edge Function proxy (API key is server-side only) ───
-const PROXY_URL = 'https://pkwbqbxuujpcvndpacsc.supabase.co/functions/v1/gemini-proxy';
+const PROXY_URL = 'https://etasxbaorwgjoofdxean.supabase.co/functions/v1/gemini-proxy';
 const MODEL = 'gemini-2.5-flash';
 
 // ─── Gemini API response types ───
